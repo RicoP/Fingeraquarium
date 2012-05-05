@@ -755,7 +755,13 @@ Resource = function(root) {
     }
 }
 
-aquarium.run = function(canvas_id, root) {
+aquarium.run_canvas = function(canvas_id, root) {
+    var renderer = new aquarium.CanvasRenderer(canvas_id, root);
+    var world = new aquarium.World(renderer);
+    renderer.initialize(world, data);
+}
+
+aquarium.run_webgl = function(canvas_id, root) {
     var renderer = new aquarium.WebGLRenderer(canvas_id, root);
     var world = new aquarium.World(renderer);
     renderer.initialize(world, data);
