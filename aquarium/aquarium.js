@@ -12,7 +12,9 @@ Function.prototype.bind = function(obj) {
 
 // Namespace.
 
-aquarium = {};
+var aquarium = {};
+
+//= webGLRenderer.js
 
 // --- Convenience methods.
 aquarium.create_fish = function(world, x, y, value) {
@@ -581,7 +583,6 @@ aquarium.World = function(renderer) {
                 this.mousedownhandler.bind(this));
         this.renderer.addEventListener('onmouseup',
                 this.mouseuphandler.bind(this));
-
     }
 
     this.setup = function() {
@@ -644,7 +645,6 @@ aquarium.Renderer = function(root) {
             }
             this.current_frame++;
         }
-
         requestAnimationFrame(this.frame.bind(this));
     }
 
@@ -705,21 +705,6 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
             gl.drawArrays();
         }
         gl.teardown();*/
-
-        return 2;
-    }
-
-    this.add_frame_callback(this.render.bind(this));
-}
-
-aquarium.WebGLRenderer = function(canvas_id) {
-    aquarium.Renderer.call(this);
-    this.canvas = document.getElementById(canvas_id);
-
-    this.render = function() {
-        for(var i = 0, e; e = this.world.entities[i]; i++) {
-            var resource = this.resource.entries[e.resource_id];
-        }
 
         return 2;
     }

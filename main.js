@@ -1,9 +1,11 @@
-"use strict"; 
+//"use strict"; 
 var gl; 
 
+//= objloader.js/lib/webgl-debug.js 
 //= gl-matrix/gl-matrix-min.js 
 //= objloader.js/lib/util/util.js
 //= shapes.js  
+//= aquarium/aquarium.js 
 
 // MAIN 
 var projection = mat4.perspective(75, 4/3, 0.1, 10); 
@@ -12,7 +14,7 @@ var isRunning = true;
 function main() {
     gl = UTIL.createContext(640, 480); 
 
-	var camPos = vec3.create([0,1,2]);
+   	var camPos = vec3.create([0,1,2]);
 	var camNormal = vec3.create([0,0,-1]); 
 	var camDir = vec3.create([0,0,0]); 
 	var camUp = vec3.create([0,1,0]); 
@@ -83,5 +85,3 @@ function clear(gl) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); 
 	gl.enable(gl.DEPTH_TEST); 
 }
-
-window.onload = main; 
