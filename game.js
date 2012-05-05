@@ -2617,6 +2617,7 @@ Function.prototype.bind = function(obj) {
 // Namespace.
 
 var aquarium = {};
+aquarium.initial_fishes = 15;
 
 aquarium.WebGLRenderer = function(canvas_id, root) {
     aquarium.Renderer.call(this, root);
@@ -2625,20 +2626,41 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 	gl = this.canvas.getContext("experimental-webgl", {alpha : false, preserveDrawingBuffer : true}); 
 
 
-   	var camPos = vec3.create([0,0,0.5]);
+   	var camPos = vec3.create([0.5,0,-2]);
 	var camNormal = vec3.create([0,0,-1]); 
 	var camDir = vec3.create([0,0,0]); 
 	var camUp = vec3.create([0,1,0]); 
 	var camera = mat4.lookAt(camPos, vec3.add(camPos, camNormal, camDir), camUp);
-	var projection = mat4.perspective(75, 4/3, 0.1, 10); 
+	var projection = mat4.perspective(75, 4/3, 0.1, 8); 
 	var canvasWidth = 1024; 
 	var canvasHeight = 600; 
 
 	var renderEntity = getRenderFunc(projection); 
 
     this.render = function() {
-		console.log("renderer"); 
 		clear(gl); 	
+		if(UTIL.keys.w.down()) {
+			camPos[2] -= 0.1; 
+			camera = mat4.lookAt(camPos, vec3.add(camPos, camNormal, camDir), camUp);
+			console.log(camPos); 
+		}
+		if(UTIL.keys.s.down()) {
+			camPos[2] -= 0.1; 
+			camera = mat4.lookAt(camPos, vec3.add(camPos, camNormal, camDir), camUp);
+			console.log(camPos); 
+		}
+		if(UTIL.keys.a.down()) {
+			camPos[0] -= 0.1; 
+			camera = mat4.lookAt(camPos, vec3.add(camPos, camNormal, camDir), camUp);
+			console.log(camPos); 
+		}
+		if(UTIL.keys.d.down()) {
+			camPos[0] += 0.1; 
+			camera = mat4.lookAt(camPos, vec3.add(camPos, camNormal, camDir), camUp);
+			console.log(camPos); 
+		}
+
+		this.world.render(); 
 
         for(var i = 0, e; e = this.world.entities[i]; i++) {
 			// {pos, size, direction, speed, Age, sex }
@@ -2724,9 +2746,10 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 			// {pos, size, direction, speed, Age, sex }
 			// {texture, center, width, height}
 			var modelview = mat4.identity(); 
-			mat4.translate(modelview, [position.x / canvasWidth, position.y / canvasHeight, -4]); 
-			mat4.rotateX(modelview, 1 / 1000 * Date.now() * Math.PI / 2); 
-			mat4.scale(modelview, [1,1,1]); 
+			mat4.multiply(modelview, camera); 
+			mat4.translate(modelview, [0.5 + position.x / canvasWidth, 0.5 + position.y / canvasHeight, -4]); 
+			mat4.scale(modelview, [size / 100 ,size / 100 ,1]); 
+			mat4.rotateX(modelview, Math.PI / 2); 
 
 			gl.useProgram(program); 
 			gl.enableVertexAttribArray(0); 
@@ -2735,9 +2758,6 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 			var vModelViewIndx = gl.getUniformLocation(program, "vModelView");
 			gl.uniformMatrix4fv(vModelViewIndx, false, modelview);
 
-
-			console.log("tex"); 
-			gl.activeTexture(gl.TEXTURE0); 
 			gl.bindTexture(gl.TEXTURE_2D, texture);
 			gl.uniform1i(fTexIndx, 0); 
 			gl.bindBuffer(gl.ARRAY_BUFFER, posbuffer); 
@@ -3159,7 +3179,7 @@ aquarium.World = function(renderer) {
     // Constants.
     var BubbleTime = 2000;
     var MinAutofeedTime = 2000, MaxAutofeedTime = 5000;
-    var AutoBuyLimit = 15, AutobuyTime = 2000;
+    var AutobuyTime = 2000;
 
     Male = 0; Female = 1;
     MinBoidSize = 0.5;
@@ -3301,7 +3321,7 @@ aquarium.World = function(renderer) {
     }
 
     this.autobuy = function() {
-        if(this.count_fishes() < AutoBuyLimit) {
+        if(this.count_fishes() < aquarium.initial_fishes) {
             this.add_entity(create_default_fish());
         }
         return 20;
@@ -3350,11 +3370,11 @@ aquarium.World = function(renderer) {
                 }
             }
         }
-        this.rebuild_features(10);
+        this.rebuild_features(0);
 
         // Add initial fishes.
-        console.log('adding fishes ' + AutoBuyLimit);
-        for(var i = 0; i < AutoBuyLimit; i++) {
+        console.log('adding fishes ' + aquarium.initial_fishes);
+        for(var i = 0; i < aquarium.initial_fishes; i++) {
             this.add_entity(this.create_default_fish());
         }
 
@@ -3500,7 +3520,13 @@ Resource = function(root) {
     }
 }
 
-aquarium.run = function(canvas_id, root) {
+aquarium.run_canvas = function(canvas_id, root) {
+    var renderer = new aquarium.CanvasRenderer(canvas_id, root);
+    var world = new aquarium.World(renderer);
+    renderer.initialize(world, data);
+}
+
+aquarium.run_webgl = function(canvas_id, root) {
     var renderer = new aquarium.WebGLRenderer(canvas_id, root);
     var world = new aquarium.World(renderer);
     renderer.initialize(world, data);
