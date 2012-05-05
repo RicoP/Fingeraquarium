@@ -640,7 +640,16 @@ aquarium.Renderer = function() {
         this.add_frame_callback(this.world.step.bind(this.world));
 
         this.resource.load();
-        this.resource.callback = this.frame.bind(this);
+        this.resource.callback = this.setup.bind(this);
+    }
+
+    this.setup = function() {
+        this.frame();
+
+        for(var i = 0, e; e = this.resource.entries[i]; i++) {
+            var img = e.texture;
+            e.texture = texure_id;
+        }
     }
 
     this.resource = new Resource();
@@ -662,7 +671,7 @@ aquarium.CanvasRenderer = function(canvas_id) {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.world.render();
         for(var i = 0, e; e = this.world.entities[i]; i++) {
-            var img = this.resource.sprites[e.resource_id];
+            var img = this.resource.entries[e.resource_id];
 
             var scale = e.size / Math.max(img.width, img.height);
             if(e.type != aquarium.FeatureType) {
@@ -695,7 +704,7 @@ aquarium.CanvasRenderer = function(canvas_id) {
 }
 
 Resource = function() {
-    this.sprites = {};
+    this.entries = {};
     this.to_load = [];
     this.callback = null;
 
@@ -703,7 +712,8 @@ Resource = function() {
         var count = 0;
         for(var id in this.to_load) {
             if(this.to_load[id] == img) {
-                this.sprites[id] = img;
+                this.entries[id] = {'texture': img, 'center': [0.5, 0.5],
+                        'width': 0.1, 'height': 0.1}
                 delete this.to_load[id];
                 count--;
             }
