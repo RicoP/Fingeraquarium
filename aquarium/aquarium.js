@@ -12,7 +12,9 @@ Function.prototype.bind = function(obj) {
 
 // Namespace.
 
-aquarium = {};
+var aquarium = {};
+
+//= webGLRenderer.js
 
 // --- Convenience methods.
 aquarium.create_fish = function(world, x, y, value) {
@@ -596,10 +598,10 @@ aquarium.World = function(renderer, width, height) {
         this.renderer.addEventListener('onmouseup',
                 this.mouseuphandler.bind(this));
         for(var i = 0, f; f = this.Features[i]; i++) {
-            this.renderer.resource.add_sprite(f[1], 'images/' + f[1] + '.png');
+            this.renderer.resource.add_sprite(f[1], 'aquarium/images/' + f[1] + '.png');
         }
         for(var i = 0, f; f = FishTypes[i]; i++) {
-            this.renderer.resource.add_sprite(f[0], 'images/' + f[0] + '.png');
+            this.renderer.resource.add_sprite(f[0], 'aquarium/images/' + f[0] + '.png');
         }
 
         this.rebuild_features(10);
@@ -628,10 +630,12 @@ aquarium.Renderer = function() {
         for(var i = 0, stepper; stepper = this.steppers[i]; i++) {
             if(this.current_frame >= stepper[0]) {
                 stepper[0] += stepper[1]();
+				console.log("stepper: " + stepper[0]); 
             }
         }
         this.current_frame++;
         window.webkitRequestAnimationFrame(this.frame.bind(this));
+		//window.setTimeout(this.frame.bind(this), 1000 / 60);
     }
 
     this.addEventListener = function(name, callback) {
@@ -703,22 +707,7 @@ aquarium.CanvasRenderer = function(canvas_id) {
     this.add_frame_callback(this.render.bind(this));
 }
 
-aquarium.WebGLRenderer = function(canvas_id) {
-    aquarium.Renderer.call(this);
-    this.canvas = document.getElementById(canvas_id);
-
-    this.render = function() {
-        for(var i = 0, e; e = this.world.entities[i]; i++) {
-            var resource = this.resource.entries[e.resource_id];
-        }
-
-        return 2;
-    }
-
-    this.add_frame_callback(this.render.bind(this));
-}
-
-Resource = function() {
+var Resource = function() {
     this.entries = {};
     this.to_load = [];
     this.callback = null;
@@ -758,7 +747,7 @@ Resource = function() {
 }
 
 aquarium.run = function(canvas_id) {
-    var renderer = new aquarium.CanvasRenderer(canvas_id);
+    var renderer = new aquarium.WebGLRenderer(canvas_id);
     var world = new aquarium.World(renderer, 300, 300);
     renderer.initialize(world);
 }

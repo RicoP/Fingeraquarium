@@ -1,5 +1,808 @@
-"use strict"; 
+//"use strict"; 
 var gl; 
+
+//Copyright (c) 2009 The Chromium Authors. All rights reserved.
+//Use of this source code is governed by a BSD-style license that can be
+//found in the LICENSE file.
+
+// Various functions for helping debug WebGL apps.
+
+var WebGLDebugUtils = function() {
+
+/**
+ * Wrapped logging function.
+ * @param {string} msg Message to log.
+ */
+var log = function(msg) {
+  if (window.console && window.console.log) {
+	throw msg; 
+    window.console.log(msg);
+  }
+};
+
+/**
+ * Which arguements are enums.
+ * @type {!Object.<number, string>}
+ */
+var glValidEnumContexts = {
+
+  // Generic setters and getters
+
+  'enable': { 0:true },
+  'disable': { 0:true },
+  'getParameter': { 0:true },
+
+  // Rendering
+
+  'drawArrays': { 0:true },
+  'drawElements': { 0:true, 2:true },
+
+  // Shaders
+
+  'createShader': { 0:true },
+  'getShaderParameter': { 1:true },
+  'getProgramParameter': { 1:true },
+
+  // Vertex attributes
+
+  'getVertexAttrib': { 1:true },
+  'vertexAttribPointer': { 2:true },
+
+  // Textures
+
+  'bindTexture': { 0:true },
+  'activeTexture': { 0:true },
+  'getTexParameter': { 0:true, 1:true },
+  'texParameterf': { 0:true, 1:true },
+  'texParameteri': { 0:true, 1:true, 2:true },
+  'texImage2D': { 0:true, 2:true, 6:true, 7:true },
+  'texSubImage2D': { 0:true, 6:true, 7:true },
+  'copyTexImage2D': { 0:true, 2:true },
+  'copyTexSubImage2D': { 0:true },
+  'generateMipmap': { 0:true },
+
+  // Buffer objects
+
+  'bindBuffer': { 0:true },
+  'bufferData': { 0:true, 2:true },
+  'bufferSubData': { 0:true },
+  'getBufferParameter': { 0:true, 1:true },
+
+  // Renderbuffers and framebuffers
+
+  'pixelStorei': { 0:true, 1:true },
+  'readPixels': { 4:true, 5:true },
+  'bindRenderbuffer': { 0:true },
+  'bindFramebuffer': { 0:true },
+  'checkFramebufferStatus': { 0:true },
+  'framebufferRenderbuffer': { 0:true, 1:true, 2:true },
+  'framebufferTexture2D': { 0:true, 1:true, 2:true },
+  'getFramebufferAttachmentParameter': { 0:true, 1:true, 2:true },
+  'getRenderbufferParameter': { 0:true, 1:true },
+  'renderbufferStorage': { 0:true, 1:true },
+
+  // Frame buffer operations (clear, blend, depth test, stencil)
+
+  'clear': { 0:true },
+  'depthFunc': { 0:true },
+  'blendFunc': { 0:true, 1:true },
+  'blendFuncSeparate': { 0:true, 1:true, 2:true, 3:true },
+  'blendEquation': { 0:true },
+  'blendEquationSeparate': { 0:true, 1:true },
+  'stencilFunc': { 0:true },
+  'stencilFuncSeparate': { 0:true, 1:true },
+  'stencilMaskSeparate': { 0:true },
+  'stencilOp': { 0:true, 1:true, 2:true },
+  'stencilOpSeparate': { 0:true, 1:true, 2:true, 3:true },
+
+  // Culling
+
+  'cullFace': { 0:true },
+  'frontFace': { 0:true },
+};
+
+/**
+ * Map of numbers to names.
+ * @type {Object}
+ */
+var glEnums = null;
+
+/**
+ * Initializes this module. Safe to call more than once.
+ * @param {!WebGLRenderingContext} ctx A WebGL context. If
+ *    you have more than one context it doesn't matter which one
+ *    you pass in, it is only used to pull out constants.
+ */
+function init(ctx) {
+  if (glEnums == null) {
+    glEnums = { };
+    for (var propertyName in ctx) {
+      if (typeof ctx[propertyName] == 'number') {
+        glEnums[ctx[propertyName]] = propertyName;
+      }
+    }
+  }
+}
+
+/**
+ * Checks the utils have been initialized.
+ */
+function checkInit() {
+  if (glEnums == null) {
+    throw 'WebGLDebugUtils.init(ctx) not called';
+  }
+}
+
+/**
+ * Returns true or false if value matches any WebGL enum
+ * @param {*} value Value to check if it might be an enum.
+ * @return {boolean} True if value matches one of the WebGL defined enums
+ */
+function mightBeEnum(value) {
+  checkInit();
+  return (glEnums[value] !== undefined);
+}
+
+/**
+ * Gets an string version of an WebGL enum.
+ *
+ * Example:
+ *   var str = WebGLDebugUtil.glEnumToString(ctx.getError());
+ *
+ * @param {number} value Value to return an enum for
+ * @return {string} The string version of the enum.
+ */
+function glEnumToString(value) {
+  checkInit();
+  var name = glEnums[value];
+  return (name !== undefined) ? name :
+      ("*UNKNOWN WebGL ENUM (0x" + value.toString(16) + ")");
+}
+
+/**
+ * Returns the string version of a WebGL argument.
+ * Attempts to convert enum arguments to strings.
+ * @param {string} functionName the name of the WebGL function.
+ * @param {number} argumentIndx the index of the argument.
+ * @param {*} value The value of the argument.
+ * @return {string} The value as a string.
+ */
+function glFunctionArgToString(functionName, argumentIndex, value) {
+  var funcInfo = glValidEnumContexts[functionName];
+  if (funcInfo !== undefined) {
+    if (funcInfo[argumentIndex]) {
+      return glEnumToString(value);
+    }
+  }
+  return value.toString();
+}
+
+function makePropertyWrapper(wrapper, original, propertyName) {
+  //log("wrap prop: " + propertyName);
+  wrapper.__defineGetter__(propertyName, function() {
+    return original[propertyName];
+  });
+  // TODO(gmane): this needs to handle properties that take more than
+  // one value?
+  wrapper.__defineSetter__(propertyName, function(value) {
+    //log("set: " + propertyName);
+    original[propertyName] = value;
+  });
+}
+
+// Makes a function that calls a function on another object.
+function makeFunctionWrapper(original, functionName) {
+  //log("wrap fn: " + functionName);
+  var f = original[functionName];
+  return function() {
+    //log("call: " + functionName);
+    var result = f.apply(original, arguments);
+    return result;
+  };
+}
+
+/**
+ * Given a WebGL context returns a wrapped context that calls
+ * gl.getError after every command and calls a function if the
+ * result is not gl.NO_ERROR.
+ *
+ * @param {!WebGLRenderingContext} ctx The webgl context to
+ *        wrap.
+ * @param {!function(err, funcName, args): void} opt_onErrorFunc
+ *        The function to call when gl.getError returns an
+ *        error. If not specified the default function calls
+ *        console.log with a message.
+ */
+function makeDebugContext(ctx, opt_onErrorFunc) {
+  init(ctx);
+  opt_onErrorFunc = opt_onErrorFunc || function(err, functionName, args) {
+        // apparently we can't do args.join(",");
+        var argStr = "";
+        for (var ii = 0; ii < args.length; ++ii) {
+          argStr += ((ii == 0) ? '' : ', ') +
+              glFunctionArgToString(functionName, ii, args[ii]);
+        }
+        log("WebGL error "+ glEnumToString(err) + " in "+ functionName +
+            "(" + argStr + ")");
+      };
+
+  // Holds booleans for each GL error so after we get the error ourselves
+  // we can still return it to the client app.
+  var glErrorShadow = { };
+
+  // Makes a function that calls a WebGL function and then calls getError.
+  function makeErrorWrapper(ctx, functionName) {
+    return function() {
+      var result = ctx[functionName].apply(ctx, arguments);
+      var err = ctx.getError();
+      if (err != 0) {
+        glErrorShadow[err] = true;
+        opt_onErrorFunc(err, functionName, arguments);
+      }
+      return result;
+    };
+  }
+
+  // Make a an object that has a copy of every property of the WebGL context
+  // but wraps all functions.
+  var wrapper = {};
+  for (var propertyName in ctx) {
+    if (typeof ctx[propertyName] == 'function') {
+       wrapper[propertyName] = makeErrorWrapper(ctx, propertyName);
+     } else {
+       makePropertyWrapper(wrapper, ctx, propertyName);
+     }
+  }
+
+  // Override the getError function with one that returns our saved results.
+  wrapper.getError = function() {
+    for (var err in glErrorShadow) {
+      if (glErrorShadow.hasOwnProperty(err)) {
+        if (glErrorShadow[err]) {
+          glErrorShadow[err] = false;
+          return err;
+        }
+      }
+    }
+    return ctx.NO_ERROR;
+  };
+
+  return wrapper;
+}
+
+function resetToInitialState(ctx) {
+  var numAttribs = ctx.getParameter(ctx.MAX_VERTEX_ATTRIBS);
+  var tmp = ctx.createBuffer();
+  ctx.bindBuffer(ctx.ARRAY_BUFFER, tmp);
+  for (var ii = 0; ii < numAttribs; ++ii) {
+    ctx.disableVertexAttribArray(ii);
+    ctx.vertexAttribPointer(ii, 4, ctx.FLOAT, false, 0, 0);
+    ctx.vertexAttrib1f(ii, 0);
+  }
+  ctx.deleteBuffer(tmp);
+
+  var numTextureUnits = ctx.getParameter(ctx.MAX_TEXTURE_IMAGE_UNITS);
+  for (var ii = 0; ii < numTextureUnits; ++ii) {
+    ctx.activeTexture(ctx.TEXTURE0 + ii);
+    ctx.bindTexture(ctx.TEXTURE_CUBE_MAP, null);
+    ctx.bindTexture(ctx.TEXTURE_2D, null);
+  }
+
+  ctx.activeTexture(ctx.TEXTURE0);
+  ctx.useProgram(null);
+  ctx.bindBuffer(ctx.ARRAY_BUFFER, null);
+  ctx.bindBuffer(ctx.ELEMENT_ARRAY_BUFFER, null);
+  ctx.bindFramebuffer(ctx.FRAMEBUFFER, null);
+  ctx.bindRenderbuffer(ctx.RENDERBUFFER, null);
+  ctx.disable(ctx.BLEND);
+  ctx.disable(ctx.CULL_FACE);
+  ctx.disable(ctx.DEPTH_TEST);
+  ctx.disable(ctx.DITHER);
+  ctx.disable(ctx.SCISSOR_TEST);
+  ctx.blendColor(0, 0, 0, 0);
+  ctx.blendEquation(ctx.FUNC_ADD);
+  ctx.blendFunc(ctx.ONE, ctx.ZERO);
+  ctx.clearColor(0, 0, 0, 0);
+  ctx.clearDepth(1);
+  ctx.clearStencil(-1);
+  ctx.colorMask(true, true, true, true);
+  ctx.cullFace(ctx.BACK);
+  ctx.depthFunc(ctx.LESS);
+  ctx.depthMask(true);
+  ctx.depthRange(0, 1);
+  ctx.frontFace(ctx.CCW);
+  ctx.hint(ctx.GENERATE_MIPMAP_HINT, ctx.DONT_CARE);
+  ctx.lineWidth(1);
+  ctx.pixelStorei(ctx.PACK_ALIGNMENT, 4);
+  ctx.pixelStorei(ctx.UNPACK_ALIGNMENT, 4);
+  ctx.pixelStorei(ctx.UNPACK_FLIP_Y_WEBGL, false);
+  ctx.pixelStorei(ctx.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+  // TODO: Delete this IF.
+  if (ctx.UNPACK_COLORSPACE_CONVERSION_WEBGL) {
+    ctx.pixelStorei(ctx.UNPACK_COLORSPACE_CONVERSION_WEBGL, ctx.BROWSER_DEFAULT_WEBGL);
+  }
+  ctx.polygonOffset(0, 0);
+  ctx.sampleCoverage(1, false);
+  ctx.scissor(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.stencilFunc(ctx.ALWAYS, 0, 0xFFFFFFFF);
+  ctx.stencilMask(0xFFFFFFFF);
+  ctx.stencilOp(ctx.KEEP, ctx.KEEP, ctx.KEEP);
+  ctx.viewport(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.clear(ctx.COLOR_BUFFER_BIT | ctx.DEPTH_BUFFER_BIT | ctx.STENCIL_BUFFER_BIT);
+
+  // TODO: This should NOT be needed but Firefox fails with 'hint'
+  while(ctx.getError());
+}
+
+function makeLostContextSimulatingCanvas(canvas) {
+  var unwrappedContext_;
+  var wrappedContext_;
+  var onLost_ = [];
+  var onRestored_ = [];
+  var wrappedContext_ = {};
+  var contextId_ = 1;
+  var contextLost_ = false;
+  var resourceId_ = 0;
+  var resourceDb_ = [];
+  var numCallsToLoseContext_ = 0;
+  var numCalls_ = 0;
+  var canRestore_ = false;
+  var restoreTimeout_ = 0;
+
+  // Holds booleans for each GL error so can simulate errors.
+  var glErrorShadow_ = { };
+
+  canvas.getContext = function(f) {
+    return function() {
+      var ctx = f.apply(canvas, arguments);
+      // Did we get a context and is it a WebGL context?
+      if (ctx instanceof WebGLRenderingContext) {
+        if (ctx != unwrappedContext_) {
+          if (unwrappedContext_) {
+            throw "got different context"
+          }
+          unwrappedContext_ = ctx;
+          wrappedContext_ = makeLostContextSimulatingContext(unwrappedContext_);
+        }
+        return wrappedContext_;
+      }
+      return ctx;
+    }
+  }(canvas.getContext);
+
+  function wrapEvent(listener) {
+    if (typeof(listener) == "function") {
+      return listener;
+    } else {
+      return function(info) {
+        listener.handleEvent(info);
+      }
+    }
+  }
+
+  var addOnContextLostListener = function(listener) {
+    onLost_.push(wrapEvent(listener));
+  };
+
+  var addOnContextRestoredListener = function(listener) {
+    onRestored_.push(wrapEvent(listener));
+  };
+
+
+  function wrapAddEventListener(canvas) {
+    var f = canvas.addEventListener;
+    canvas.addEventListener = function(type, listener, bubble) {
+      switch (type) {
+        case 'webglcontextlost':
+          addOnContextLostListener(listener);
+          break;
+        case 'webglcontextrestored':
+          addOnContextRestoredListener(listener);
+          break;
+        default:
+          f.apply(canvas, arguments);
+      }
+    };
+  }
+
+  wrapAddEventListener(canvas);
+
+  canvas.loseContext = function() {
+    if (!contextLost_) {
+      contextLost_ = true;
+      numCallsToLoseContext_ = 0;
+      ++contextId_;
+      while (unwrappedContext_.getError());
+      clearErrors();
+      glErrorShadow_[unwrappedContext_.CONTEXT_LOST_WEBGL] = true;
+      var event = makeWebGLContextEvent("context lost");
+      var callbacks = onLost_.slice();
+      setTimeout(function() {
+          //log("numCallbacks:" + callbacks.length);
+          for (var ii = 0; ii < callbacks.length; ++ii) {
+            //log("calling callback:" + ii);
+            callbacks[ii](event);
+          }
+          if (restoreTimeout_ >= 0) {
+            setTimeout(function() {
+                canvas.restoreContext();
+              }, restoreTimeout_);
+          }
+        }, 0);
+    }
+  };
+
+  canvas.restoreContext = function() {
+    if (contextLost_) {
+      if (onRestored_.length) {
+        setTimeout(function() {
+            if (!canRestore_) {
+              throw "can not restore. webglcontestlost listener did not call event.preventDefault";
+            }
+            freeResources();
+            resetToInitialState(unwrappedContext_);
+            contextLost_ = false;
+            numCalls_ = 0;
+            canRestore_ = false;
+            var callbacks = onRestored_.slice();
+            var event = makeWebGLContextEvent("context restored");
+            for (var ii = 0; ii < callbacks.length; ++ii) {
+              callbacks[ii](event);
+            }
+          }, 0);
+      }
+    }
+  };
+
+  canvas.loseContextInNCalls = function(numCalls) {
+    if (contextLost_) {
+      throw "You can not ask a lost contet to be lost";
+    }
+    numCallsToLoseContext_ = numCalls_ + numCalls;
+  };
+
+  canvas.getNumCalls = function() {
+    return numCalls_;
+  };
+
+  canvas.setRestoreTimeout = function(timeout) {
+    restoreTimeout_ = timeout;
+  };
+
+  function isWebGLObject(obj) {
+    //return false;
+    return (obj instanceof WebGLBuffer ||
+            obj instanceof WebGLFramebuffer ||
+            obj instanceof WebGLProgram ||
+            obj instanceof WebGLRenderbuffer ||
+            obj instanceof WebGLShader ||
+            obj instanceof WebGLTexture);
+  }
+
+  function checkResources(args) {
+    for (var ii = 0; ii < args.length; ++ii) {
+      var arg = args[ii];
+      if (isWebGLObject(arg)) {
+        return arg.__webglDebugContextLostId__ == contextId_;
+      }
+    }
+    return true;
+  }
+
+  function clearErrors() {
+    var k = Object.keys(glErrorShadow_);
+    for (var ii = 0; ii < k.length; ++ii) {
+      delete glErrorShadow_[k];
+    }
+  }
+
+  function loseContextIfTime() {
+    ++numCalls_;
+    if (!contextLost_) {
+      if (numCallsToLoseContext_ == numCalls_) {
+        canvas.loseContext();
+      }
+    }
+  }
+
+  // Makes a function that simulates WebGL when out of context.
+  function makeLostContextFunctionWrapper(ctx, functionName) {
+    var f = ctx[functionName];
+    return function() {
+      // log("calling:" + functionName);
+      // Only call the functions if the context is not lost.
+      loseContextIfTime();
+      if (!contextLost_) {
+        //if (!checkResources(arguments)) {
+        //  glErrorShadow_[wrappedContext_.INVALID_OPERATION] = true;
+        //  return;
+        //}
+        var result = f.apply(ctx, arguments);
+        return result;
+      }
+    };
+  }
+
+  function freeResources() {
+    for (var ii = 0; ii < resourceDb_.length; ++ii) {
+      var resource = resourceDb_[ii];
+      if (resource instanceof WebGLBuffer) {
+        unwrappedContext_.deleteBuffer(resource);
+      } else if (resource instanceof WebGLFramebuffer) {
+        unwrappedContext_.deleteFramebuffer(resource);
+      } else if (resource instanceof WebGLProgram) {
+        unwrappedContext_.deleteProgram(resource);
+      } else if (resource instanceof WebGLRenderbuffer) {
+        unwrappedContext_.deleteRenderbuffer(resource);
+      } else if (resource instanceof WebGLShader) {
+        unwrappedContext_.deleteShader(resource);
+      } else if (resource instanceof WebGLTexture) {
+        unwrappedContext_.deleteTexture(resource);
+      }
+    }
+  }
+
+  function makeWebGLContextEvent(statusMessage) {
+    return {
+      statusMessage: statusMessage,
+      preventDefault: function() {
+          canRestore_ = true;
+        }
+    };
+  }
+
+  return canvas;
+
+  function makeLostContextSimulatingContext(ctx) {
+    // copy all functions and properties to wrapper
+    for (var propertyName in ctx) {
+      if (typeof ctx[propertyName] == 'function') {
+         wrappedContext_[propertyName] = makeLostContextFunctionWrapper(
+             ctx, propertyName);
+       } else {
+         makePropertyWrapper(wrappedContext_, ctx, propertyName);
+       }
+    }
+
+    // Wrap a few functions specially.
+    wrappedContext_.getError = function() {
+      loseContextIfTime();
+      if (!contextLost_) {
+        var err;
+        while (err = unwrappedContext_.getError()) {
+          glErrorShadow_[err] = true;
+        }
+      }
+      for (var err in glErrorShadow_) {
+        if (glErrorShadow_[err]) {
+          delete glErrorShadow_[err];
+          return err;
+        }
+      }
+      return wrappedContext_.NO_ERROR;
+    };
+
+    var creationFunctions = [
+      "createBuffer",
+      "createFramebuffer",
+      "createProgram",
+      "createRenderbuffer",
+      "createShader",
+      "createTexture"
+    ];
+    for (var ii = 0; ii < creationFunctions.length; ++ii) {
+      var functionName = creationFunctions[ii];
+      wrappedContext_[functionName] = function(f) {
+        return function() {
+          loseContextIfTime();
+          if (contextLost_) {
+            return null;
+          }
+          var obj = f.apply(ctx, arguments);
+          obj.__webglDebugContextLostId__ = contextId_;
+          resourceDb_.push(obj);
+          return obj;
+        };
+      }(ctx[functionName]);
+    }
+
+    var functionsThatShouldReturnNull = [
+      "getActiveAttrib",
+      "getActiveUniform",
+      "getBufferParameter",
+      "getContextAttributes",
+      "getAttachedShaders",
+      "getFramebufferAttachmentParameter",
+      "getParameter",
+      "getProgramParameter",
+      "getProgramInfoLog",
+      "getRenderbufferParameter",
+      "getShaderParameter",
+      "getShaderInfoLog",
+      "getShaderSource",
+      "getTexParameter",
+      "getUniform",
+      "getUniformLocation",
+      "getVertexAttrib"
+    ];
+    for (var ii = 0; ii < functionsThatShouldReturnNull.length; ++ii) {
+      var functionName = functionsThatShouldReturnNull[ii];
+      wrappedContext_[functionName] = function(f) {
+        return function() {
+          loseContextIfTime();
+          if (contextLost_) {
+            return null;
+          }
+          return f.apply(ctx, arguments);
+        }
+      }(wrappedContext_[functionName]);
+    }
+
+    var isFunctions = [
+      "isBuffer",
+      "isEnabled",
+      "isFramebuffer",
+      "isProgram",
+      "isRenderbuffer",
+      "isShader",
+      "isTexture"
+    ];
+    for (var ii = 0; ii < isFunctions.length; ++ii) {
+      var functionName = isFunctions[ii];
+      wrappedContext_[functionName] = function(f) {
+        return function() {
+          loseContextIfTime();
+          if (contextLost_) {
+            return false;
+          }
+          return f.apply(ctx, arguments);
+        }
+      }(wrappedContext_[functionName]);
+    }
+
+    wrappedContext_.checkFramebufferStatus = function(f) {
+      return function() {
+        loseContextIfTime();
+        if (contextLost_) {
+          return wrappedContext_.FRAMEBUFFER_UNSUPPORTED;
+        }
+        return f.apply(ctx, arguments);
+      };
+    }(wrappedContext_.checkFramebufferStatus);
+
+    wrappedContext_.getAttribLocation = function(f) {
+      return function() {
+        loseContextIfTime();
+        if (contextLost_) {
+          return -1;
+        }
+        return f.apply(ctx, arguments);
+      };
+    }(wrappedContext_.getAttribLocation);
+
+    wrappedContext_.getVertexAttribOffset = function(f) {
+      return function() {
+        loseContextIfTime();
+        if (contextLost_) {
+          return 0;
+        }
+        return f.apply(ctx, arguments);
+      };
+    }(wrappedContext_.getVertexAttribOffset);
+
+    wrappedContext_.isContextLost = function() {
+      return contextLost_;
+    };
+
+    return wrappedContext_;
+  }
+}
+
+return {
+    /**
+     * Initializes this module. Safe to call more than once.
+     * @param {!WebGLRenderingContext} ctx A WebGL context. If
+    }
+   *    you have more than one context it doesn't matter which one
+   *    you pass in, it is only used to pull out constants.
+   */
+  'init': init,
+
+  /**
+   * Returns true or false if value matches any WebGL enum
+   * @param {*} value Value to check if it might be an enum.
+   * @return {boolean} True if value matches one of the WebGL defined enums
+   */
+  'mightBeEnum': mightBeEnum,
+
+  /**
+   * Gets an string version of an WebGL enum.
+   *
+   * Example:
+   *   WebGLDebugUtil.init(ctx);
+   *   var str = WebGLDebugUtil.glEnumToString(ctx.getError());
+   *
+   * @param {number} value Value to return an enum for
+   * @return {string} The string version of the enum.
+   */
+  'glEnumToString': glEnumToString,
+
+  /**
+   * Converts the argument of a WebGL function to a string.
+   * Attempts to convert enum arguments to strings.
+   *
+   * Example:
+   *   WebGLDebugUtil.init(ctx);
+   *   var str = WebGLDebugUtil.glFunctionArgToString('bindTexture', 0, gl.TEXTURE_2D);
+   *
+   * would return 'TEXTURE_2D'
+   *
+   * @param {string} functionName the name of the WebGL function.
+   * @param {number} argumentIndx the index of the argument.
+   * @param {*} value The value of the argument.
+   * @return {string} The value as a string.
+   */
+  'glFunctionArgToString': glFunctionArgToString,
+
+  /**
+   * Given a WebGL context returns a wrapped context that calls
+   * gl.getError after every command and calls a function if the
+   * result is not NO_ERROR.
+   *
+   * You can supply your own function if you want. For example, if you'd like
+   * an exception thrown on any GL error you could do this
+   *
+   *    function throwOnGLError(err, funcName, args) {
+   *      throw WebGLDebugUtils.glEnumToString(err) +
+   *            " was caused by call to " + funcName;
+   *    };
+   *
+   *    ctx = WebGLDebugUtils.makeDebugContext(
+   *        canvas.getContext("webgl"), throwOnGLError);
+   *
+   * @param {!WebGLRenderingContext} ctx The webgl context to wrap.
+   * @param {!function(err, funcName, args): void} opt_onErrorFunc The function
+   *     to call when gl.getError returns an error. If not specified the default
+   *     function calls console.log with a message.
+   */
+  'makeDebugContext': makeDebugContext,
+
+  /**
+   * Given a canvas element returns a wrapped canvas element that will
+   * simulate lost context. The canvas returned adds the following functions.
+   *
+   * loseContext:
+   *   simulates a lost context event.
+   *
+   * restoreContext:
+   *   simulates the context being restored.
+   *
+   * lostContextInNCalls:
+   *   loses the context after N gl calls.
+   *
+   * getNumCalls:
+   *   tells you how many gl calls there have been so far.
+   *
+   * setRestoreTimeout:
+   *   sets the number of milliseconds until the context is restored
+   *   after it has been lost. Defaults to 0. Pass -1 to prevent
+   *   automatic restoring.
+   *
+   * @param {!Canvas} canvas The canvas element to wrap.
+   */
+  'makeLostContextSimulatingCanvas': makeLostContextSimulatingCanvas,
+
+  /**
+   * Resets a context to the initial state.
+   * @param {!WebGLRenderingContext} ctx The webgl context to
+   *     reset.
+   */
+  'resetToInitialState': resetToInitialState
+};
+
+}();
+
+
 
 // gl-matrix 1.3.1 - https://github.com/toji/gl-matrix/blob/master/LICENSE.md
 (function(n,D){"object"===typeof exports?module.exports=D(global):"function"===typeof define&&define.amd?define([],function(){return D(n)}):D(n)})(this,function(n){function D(a){return s=a}function K(){return s="undefined"!==typeof Float32Array?Float32Array:Array}var E={};(function(){if("undefined"!=typeof Float32Array){var a=new Float32Array(1),b=new Int32Array(a.buffer);E.invsqrt=function(c){a[0]=c;b[0]=1597463007-(b[0]>>1);var d=a[0];return d*(1.5-0.5*c*d*d)}}else E.invsqrt=function(a){return 1/
@@ -1803,6 +2606,894 @@ var SHAPES = (function() {
 }());
 
 
+// Setup stuff for event handling.
+Function.prototype.bind = function(obj) {
+    var method = this;
+    return function() {
+        args = [this];
+        for(var i = 0; i < arguments.length; i++) {
+            args.push(arguments[i]);
+        }
+        return method.apply(obj, args);
+    }
+}
+
+// Namespace.
+
+var aquarium = {};
+
+aquarium.WebGLRenderer = function(canvas_id) {
+    aquarium.Renderer.call(this);
+    this.canvas = document.getElementById(canvas_id);
+	gl = WebGLDebugUtils.makeDebugContext(this.canvas.getContext("experimental-webgl", {alpha : false, preserveDrawingBuffer : true}).getSafeContext()); 
+
+	var renderEntity = getRenderFunc(); 
+
+   	var camPos = vec3.create([0,0,0.5]);
+	var camNormal = vec3.create([0,0,-1]); 
+	var camDir = vec3.create([0,0,0]); 
+	var camUp = vec3.create([0,1,0]); 
+	var camera = mat4.lookAt(camPos, vec3.add(camPos, camNormal, camDir), camUp);
+	var projection = mat4.perspective(75, 4/3, 0.1, 10); 
+
+    this.render = function() {
+		console.log("renderer"); 
+		clear(gl); 	
+
+        for(var i = 0, e; e = this.world.entities[i]; i++) {
+			// {pos, size, direction, speed, Age, sex }
+
+            var resource = this.resource.entries[e.resource_id];
+			// {texture, center, width, height}
+					
+			renderEntity(projection, camera, resource.texture, e.pos); 
+        }
+
+        return 1;
+    }
+
+    this.add_frame_callback(this.render.bind(this));
+
+	this.setup = function() {
+		console.log("setup"); 
+		for(var resourceId in this.resource.entries) {
+            var resource = this.resource.entries[resourceId];
+			// {texture, center}
+			var glTexture = gl.createTexture(); 
+			var image = resource.texture; 
+
+			gl.bindTexture(gl.TEXTURE_2D, glTexture);
+			gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.bindTexture(gl.TEXTURE_2D, null);
+
+			resource.texture = glTexture; 
+        }
+	
+		this.frame(); 
+	}; 
+
+	function getRenderFunc() {
+		var vPositionIndx = 0; 
+		var vColorIndx = 1; 
+		var vTransIndx = 2; 
+
+		var vShaderSrc = UTIL.getSource("shader.vs"); 
+		var fShaderSrc = UTIL.getSource("shader.fs"); 
+
+		var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+		gl.shaderSource(vertexShader, vShaderSrc);
+		gl.compileShader(vertexShader);
+
+		var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+		gl.shaderSource(fragmentShader, fShaderSrc);
+		gl.compileShader(fragmentShader);
+
+		var program = gl.createProgram();
+
+		gl.attachShader(program, vertexShader);
+		gl.attachShader(program, fragmentShader);
+		gl.linkProgram(program);	
+
+		var plane = UTIL.shapes.createPlane(0); 
+		var vertices = plane.vertices; 
+		var texCoords = plane.texCoords; 
+		program.numVertices = vertices.length / 4; 
+
+		//Vertices
+		var posbuffer = gl.createBuffer(); 
+		gl.bindBuffer(gl.ARRAY_BUFFER, posbuffer); 
+		gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW); 
+		gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 0, 0); 
+		gl.enableVertexAttribArray(0); 		
+
+		//texture koordinaten 
+		var texbuffer = gl.createBuffer(); 
+		gl.bindBuffer(gl.ARRAY_BUFFER, texbuffer); 
+		gl.bufferData(gl.ARRAY_BUFFER, texCoords, gl.STATIC_DRAW); 	
+		gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0); 
+		gl.enableVertexAttribArray(1); 		
+
+		return function(projection, camera, texture, position) {
+			var modelview = mat4.identity(); 
+			mat4.translate(modelview, [position.x / 150, position.y / 150, -4]); 
+			mat4.rotateX(modelview, 1 / 1000 * Date.now() * Math.PI / 2); 
+			mat4.scale(modelview, [1,1,1]); 
+
+			gl.useProgram(program); 
+			gl.enableVertexAttribArray(0); 
+			gl.enableVertexAttribArray(1); 		
+
+			var vModelViewIndx = gl.getUniformLocation(program, "vModelView");
+			gl.uniformMatrix4fv(vModelViewIndx, false, modelview);
+
+			var vProjectionIndx = gl.getUniformLocation(program, "vProjection");
+			gl.uniformMatrix4fv(vProjectionIndx, false, projection);
+
+			var fTexIndx = gl.getUniformLocation(program, "texture"); 
+			gl.activeTexture(gl.TEXTURE0); 
+			gl.bindTexture(gl.TEXTURE_2D, texture);
+			gl.uniform1i(fTexIndx, 0); 
+			gl.bindBuffer(gl.ARRAY_BUFFER, posbuffer); 
+			gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 0, 0); 
+			gl.enableVertexAttribArray(0); 
+			gl.drawArrays(gl.TRIANGLES, 0, program.numVertices); 
+
+			gl.bindTexture(gl.TEXTURE_2D, null);
+		};
+	}
+
+	function clear(gl) {
+    	gl.viewport(0, 0, 640, 480); 
+	    gl.clearColor(97 / 256, 149 / 256, 237 / 256, 1); 
+	    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); 
+		gl.enable(gl.DEPTH_TEST); 
+	}
+}
+
+
+
+
+
+// --- Convenience methods.
+aquarium.create_fish = function(world, x, y, value) {
+    // Create a fish and select its characterists from FishTypes based on its
+    // value.
+    var new_value = Math.min(aquarium.uniform(value / 2, value), FishTypes.length);
+    var type = FishTypes[Math.floor(new_value)];
+
+    console.log('creating fish ', type);
+    var pixmap = type[0];
+    var max_age = aquarium.uniform(type[1], type[2]);
+    var energy = aquarium.uniform(type[3], type[4]);
+    var avg_speed = aquarium.uniform(type[5], type[6]);
+    var breed_time = aquarium.uniform(type[7], type[8]);
+
+    return new aquarium.Boid(world,
+            x, y, pixmap, new_value, max_age, energy, avg_speed, breed_time);
+}
+
+aquarium.distance = function(x, y) {
+    // Returns the distance of a vector to the origin.
+    return Math.sqrt(x * x + y * y);
+}
+
+aquarium.angle_between = function(a_x, a_y, b_x, b_y) {
+    // Returns the angle between two vectors.
+    var d = aquarium.distance(a_x, a_y) * aquarium.distance(b_x, b_y);
+    if(d < 0.01) return 0;
+    return Math.acos((a_x * b_x + a_y * b_y) / d);
+}
+
+aquarium.uniform = function(a, b) {
+    // Convenience method to return a float between a and b.
+    return a + Math.random() * (b - a);
+}
+
+aquarium.delta = function(p1, p2) {
+    // Difference between two vectors.
+    return new aquarium.Point(p2.x - p1.x, p2.y - p1.y);
+}
+
+aquarium.scale = function(p1, s) {
+    // Returns a scaled instance of a vector.
+    return new aquarium.Point(p1.x * s, p1.y * s);
+}
+
+// --- Classes.
+aquarium.Point = function(x, y) {
+    // A generic vector with some utility functions.
+    this.x = x;
+    this.y = y;
+
+    this.len = function() {
+        return aquarium.distance(this.x, this.y);
+    }
+
+    this.add = function(other) {
+        this.x += other.x; this.y += other.y;
+    }
+
+    this.scale = function(a) {
+        this.x *= a; this.y *= a;
+        return this;
+    }
+
+    this.reset = function() {
+        this.x = 0; this.y = 0;
+    }
+
+    this.normalize = function() {
+        var l = this.len();
+
+        if(l > 0.01) {
+            this.x /= l; this.y /= l;
+        } else {
+            this.x = 0; this.y = 0;
+        }
+    }
+
+    this.str = function() {
+        return this.x.toFixed(2) + ", " + this.y.toFixed(2);
+    }
+}
+
+aquarium.Entity = function(world, x, y, size, resource_id) {
+    // The base class for visual objects like food, fishes and bubbles.
+    this.type = undefined;
+
+    this.world = world;
+    this.pos = new aquarium.Point(x, y);
+    this.size = size;
+    this.direction = new aquarium.Point(0, 0);
+    this.speed = 0;
+    this.resource_id = resource_id;
+    // TODO Mittelpunkt
+
+
+    this.move = function() {
+        this.pos.add(this.direction);
+    }
+
+    this.alive = function() {
+        return true;
+    }
+}
+
+aquarium.Feature = function(world, x, y, resource_id, callback) {
+    aquarium.Entity.call(this, world, x, y, aquarium.uniform(20, 40), resource_id);
+    this.type = aquarium.FeatureType;
+    this.callback = callback;
+}
+
+aquarium.Food = function(world, x, y, resource_id) {
+    // Food to be eaten by fishes.
+    aquarium.Entity.call(this, world, x, y, uniform(0.5, 1), resource_id);
+    this.type = aquarium.FoodType;
+
+    this.direction = new aquarium.Point(0, 1);
+    this.speed = uniform(2.5, 7.5);
+
+    this.alive = function() {
+        return (
+            this.size > 0 &&
+            this.pos.y < (plasmoid.rect.height * 0.5) * 0.9
+        );
+    }
+
+    this.eat = function() {
+        var amount = Math.min(this.size, 0.1);
+        this.size -= amount;
+        this.resize();
+        return amount * 50;
+    }
+}
+
+aquarium.Bubble = function(world, x, y, resource_id) {
+    // Just a bubble.
+    aquarium.Entity.call(this, world, x, y, uniform(0.5, 1), resource_id);
+
+    this.type = aquarium.BubbleType;
+
+    this.direction = new aquarium.Point(0, -1);
+    this.speed = uniform(10, 30);
+
+    this.alive = function() {
+        return this.pos.y > -(this.world.height * 0.5) * 0.9;
+    }
+}
+
+aquarium.Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
+        breed_time) {
+    // A boid that models the fishes behavior.
+    aquarium.Entity.call(this, world, x, y, MinBoidSize, pixmap);
+
+    this.value = value;
+    this.average_speed = average_speed;
+    this.energy = energy;
+    this.max_age = max_age;
+    this.breed_time = breed_time;
+    this.type = aquarium.BoidType;
+
+    this.acceleration = 0;
+    this.speed = this.average_speed;
+    this.age = 0;
+    this.next_breed = this.breed_time;
+    this.age_stage = 0;
+
+    this.size = 30.;
+    this.fov_radius = this.size * 5;
+
+    this.sex = Math.random() > 0.5 ? Female : Male;
+
+    this.randomize_step = 0;
+    this.food_target = undefined;
+    this.courtshipping = undefined;
+
+    this.separation = new aquarium.Point(0, 0);
+    this.cohesion = new aquarium.Point(0, 0);
+    this.alignment = new aquarium.Point(0, 0);
+
+    this.paint_entity = this.paint;
+
+    this.paint = function(painter) {
+        this.paint_entity(painter);
+
+        if(!ShowInfo) return;
+
+        r = this.fov_radius;
+
+        if(this.visible > 0)
+            painter.pen = red_pen;
+        painter.drawEllipse(-r, -r, r*2, r*2);
+        painter.pen = red_pen;
+        painter.drawLine(0, 0, this.separation.x * r, this.separation.y * r);
+        painter.pen = blue_pen;
+        painter.drawLine(0, 0, this.cohesion.x * r, this.cohesion.y * r);
+        painter.pen = green_pen;
+        painter.drawLine(0, 0, this.alignment.x * r, this.alignment.y * r);
+        painter.pen = white_pen;
+        painter.drawLine(0, 0, this.direction.x * r, this.direction.y * r);
+    }
+
+    this.perceives = function(other, dist) {
+        if(dist > this.fov_radius) return false;
+
+        var fov_angle = aquarium.angle_between(
+                -this.direction.x, -this.direction.y,
+                other.pos.x - this.pos.x, other.pos.y - this.pos.y);
+
+        return fov_angle > 0.4;
+    }
+
+    this.think = function(neighbors) {
+        var separation = new aquarium.Point(0, 0);
+        var cohesion = new aquarium.Point(0, 0);
+        var alignment = new aquarium.Point(0, 0);
+
+        var visible = 0;
+        var other_courtshipping = undefined;
+        var food_target_dist = undefined;
+
+        for(var i=0, info; info=neighbors[i]; i++) {
+            var other = info[0], dist = info[1];
+
+            switch(other.type) {
+                case aquarium.BoidType:
+                    if(other.courtshipping == this) {
+                        other_courtshipping = this;
+                    } else if(this.next_breed == 0 && this.energy > 0) {
+                        if(
+                                this.courtshipping == undefined &&
+                                other.sex != this.sex) {
+                            this.courtshipping = other;
+                        }
+                    }
+
+                    // Flocking behaviour ignores fishes of a different species.
+                    if(Math.floor(this.value) != Math.floor(other.value)) {
+                        continue;
+                    }
+                    visible++;
+
+                    // Separation
+                    if(dist < 0.01) {
+                        separation.x += Math.random();
+                        separation.y += Math.random();
+                    } else {
+                        separation.add(
+                                aquarium.delta(other.pos, this.pos).scale(
+                                        1 / dist - 1 / this.fov_radius));
+                    }
+
+                    // Cohesion
+                    cohesion.add(
+                            aquarium.delta(this.pos, other.pos).scale(
+                                    1 / this.fov_radius));
+
+                    // Alignment
+                    alignment.add(other.direction);
+                break;
+                case aquarium.FoodType:
+                    if(
+                            this.food_target == undefined || 
+                            food_target_dist > dist) {
+                        this.food_target = other;
+                        food_target_dist = dist;
+                    }
+                break;
+            }
+        }
+
+        var direction = new aquarium.Point(0, 0);
+
+        // Direction from flocking behaviour.
+        if(visible > 0) {
+            direction.add(new aquarium.Point(
+                    (separation.x + cohesion.x + alignment.x) / (3 * visible),
+                    (separation.y + cohesion.y + alignment.y) / (3 * visible)));
+        } else {
+            direction.add(this.direction);
+        }
+
+        if(this.randomize_step > 0) {
+            this.randomize_step--;
+        } else {
+            this.randomize_step = 10 + Math.floor(Math.random() * 10);
+            var explore_dir = new aquarium.Point(
+                    (0.5 - Math.random()) * 2, (0.5 - Math.random()) * 2);
+            direction.scale(0.2).add(explore_dir.scale(0.8));
+
+            this.acceleration += (0.5 - Math.random()) * 0.5;
+        }
+
+        if(this.food_target != undefined) {
+            var food_dir = delta(this.pos, this.food_target.pos);
+            direction.scale(0.4).add(food_dir.scale(0.6));
+            this.acceleration = 1;
+
+            // Eat.
+            if(food_dir.len() < this.size) {
+                amount = this.food_target.eat();
+                this.food_target = undefined;
+                this.energy += amount;
+            } else if(!this.food_target.alive()) {
+                this.food_target = undefined;
+            }
+        }
+
+        if(other_courtshipping != undefined) {
+            var flee_dir = delta(this.pos, other_courtshipping.pos).scale(-1);
+            direction.scale(0.1).add(flee_dir.scale(0.9));
+            this.acceleration = 1;
+        }
+
+        if(this.courtshipping != undefined) {
+            var chase_dir = delta(this.pos, this.courtshipping.pos);
+            direction.scale(0.1).add(chase_dir.scale(0.9));
+            this.acceleration = 1;
+            if(this.energy <= 0) {
+                this.courtshipping = undefined;
+            } else if(chase_dir.len() < this.size) {
+                this.next_breed = this.breed_time;
+                // Only add new boids if the upper limit is not reached.
+                if(world.entities.length < world.max_entities) {
+                    world.add_entity(create_fish(
+                            this.pos.x, this.pos.y,
+                            this.value + this.courtshipping.value));
+                }
+                this.courtshipping = undefined;
+            }
+        }
+
+        // Force boids back to the center of the fishbowl if they are to close
+        // to the edge.
+        var dist_center = this.pos.len();
+        var rel_dist_center = dist_center / (this.world.width * 0.5);
+
+        if(rel_dist_center > 0.9) {
+            direction = aquarium.scale(this.pos, -1);
+        }
+
+        // Acceleration is decreasing over time.
+        this.acceleration *= 0.9;
+
+        this.speed = 0.5 * this.speed +
+            this.average_speed * (1 + this.acceleration * 0.5) * 0.5;
+        this.energy = Math.max(0, this.energy - this.speed);
+        if(this.energy == 0)
+            this.speed = Math.min(this.average_speed, this.speed);
+
+        // Normalize direction.
+        direction.normalize();
+
+        // y doesn't sum up to one which will let the boids tend to swim
+        // horizontally.
+        this.direction.x = 0.75 * this.direction.x + 0.25 * direction.x;
+        this.direction.y = 0.75 * this.direction.y + 0.225 * direction.y;
+
+        this.age++;
+        if(Math.ceil((this.age / this.max_age) * AgeStages) > this.age_stage) {
+            this.age_stage++;
+            this.size = 20 * (MinBoidSize +
+                (1 - MinBoidSize) * this.age_stage / AgeStages);
+        }
+
+        this.next_breed--;
+
+        // Store values just in case they should be visualized.
+        this.separation = separation;
+        this.cohesion = cohesion;
+        this.alignment = alignment;
+    }
+
+    this.str = function() {
+        return "(" + this.pos.str() + ")";
+    }
+
+    this.alive = function() {
+        return this.age < this.max_age;
+    }
+}
+
+aquarium.FeatureType = 0;
+aquarium.BoidType = 1;
+aquarium.FoodType = 2;
+aquarium.BubbleType = 3;
+
+aquarium.World = function(renderer, width, height) {
+    this.renderer = renderer;
+    this.width = width;
+    this.height = height;
+
+    // Constants.
+    var BubbleTime = 2000;
+    var MinAutofeedTime = 2000, MaxAutofeedTime = 5000;
+    var AutoBuyLimit = 15, AutobuyTime = 2000;
+    this.Features = [
+        [0.1, "castle"], [0.5, "seaweed1"], [0.5, "seaweed2"], [0.5, "seaweed3"],
+        [0.1, "skull"], [0.1, "treasure"], [1, "sand1"], [1, "sand2"], [1, "sand3"]
+    ];
+
+    Male = 0; Female = 1;
+    MinBoidSize = 0.5;
+    AgeStages = 10;
+    ShowInfo = false;
+
+    // FishType description:
+    // [
+    //      pixmap, min_age, max_age, min_energy, max_energy,
+    //      min_avg_speed, max_avg_speed, min_breedtime, max_breedtime
+    // ]
+
+    FishTypes = [
+        ["fish1", 3 * 60, 10 * 60, 50, 100, 10, 20, 10, 30],
+        ["pinkfish", 3 * 60, 10 * 60, 100, 100, 10, 30, 10, 30],
+        ["fish2", 3 * 60, 10 * 60, 100, 100, 10, 30, 10, 30],
+        ["fish4", 3 * 60, 10 * 60, 100, 100, 10, 30, 10, 30],
+        ["fish3", 3 * 60, 10 * 60, 100, 100, 20, 30, 10, 30],
+        ["seahorse", 3 * 60, 6 * 60, 100, 100, 10, 20, 10, 30],
+        ["jaguarshark", 3 * 60, 6 * 60, 100, 100, 20, 30, 10, 30]
+    ];
+
+    // Container for all entities.
+    this.entities = [];
+    this.new_entities = [];
+    this.distances = [];
+
+    this.features = [];
+
+    this.max_entities = undefined;
+    this.update_timestep = 1 / 10;
+
+    this.create_default_fish = function() {
+        var x_max = this.width / 2;
+        var y_max = this.height / 2;
+        var fish = aquarium.create_fish(this,
+                aquarium.uniform(-x_max, x_max), aquarium.uniform(-y_max, y_max),
+                Math.random());
+        return fish;
+    }
+
+    this.get_distance = function(a, b) {
+        // Returns the distance from entity with index a to the entity with
+        // index b.
+        if(a > b) {
+            var t = a;
+            a = b;
+            b = t;
+        }
+
+        index = (a * (this.entities.length - 1) -
+                Math.floor((a - 1) * a * 0.5) + b - a - 1);
+
+        return this.distances[index];
+    }
+
+    this.step = function() {
+        // Collect dead entities.
+        var dead = [];
+
+        for(var i=0, entity; entity=this.entities[i]; i++) {
+            if(entity.alive()) continue;
+
+            dead.push(i);
+        }
+
+        dead.reverse();
+        // Strange, this doesn't work with the above iteration style.
+        for(var i=0; i<dead.length; i++) {
+            this.entities.splice(dead[i], 1);
+        }
+
+        // Add new entities.
+        for(var i=0,entity; entity=this.new_entities[i]; i++) {
+            this.entities.push(entity);
+        }
+        this.new_entities = [];
+
+        // Update distances between entities.
+        this.distances = [];
+        for(var a=0, boid_a; boid_a=this.entities[a]; a++) {
+            for(var b=a+1, boid_b; boid_b=this.entities[b]; b++) {
+                // Calculate distance between boid a and b.
+                this.distances.push(aquarium.delta(boid_a.pos, boid_b.pos).len());
+           }
+        }
+
+        for(var i=0, entity; entity=this.entities[i]; i++) {
+            // Ignore entities which can't think.
+            if(entity.think == undefined) continue;
+
+            var neighbors = [];
+
+            for(var j=0, other; other=this.entities[j]; j++) {
+                if(other == entity) continue;
+                dist = this.get_distance(i, j);
+                if(!entity.perceives(other, dist)) continue;
+
+                neighbors.push([other, dist]);
+            }
+
+            entity.think(neighbors);
+        }
+
+        return 10;
+    }
+
+    this.render = function() {
+        for(var i=0, entity; entity=this.entities[i]; i++) {
+            entity.pos.add(aquarium.scale(
+                    entity.direction, entity.speed * this.update_timestep));
+        }
+    }
+        
+    this.add_entity = function(entity) {
+        this.new_entities.push(entity);
+    }
+
+    this.count_fishes = function() {
+        var count = 0;
+        for(var i = 0, e; e = this.entities[i]; i++) {
+            if(e.think != undefined) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    this.rebuild_features = function(feature_count) {
+        // Calculate sum of weights.
+        var sum_weights = 0;
+        for(var i = 0,f; f=this.Features[i]; i++) {
+            sum_weights += f[0];
+        }
+
+        // Rebuild features.
+        var vary_x = (1 / feature_count) * 0.5;
+        for(var i = 0; i < feature_count; i++) {
+            // Select a feature index i.
+            var j, r = aquarium.uniform(0, sum_weights), current = 0;
+            for(j = 0; j < this.Features.length; j++) {
+                current += this.Features[j][0];
+                if(r <= current) break;
+            }
+
+            var pos_x = (i / feature_count + vary_x * Math.random()) *
+                    this.width - this.width / 2;
+
+            this.add_entity(new aquarium.Feature(this,
+                        pos_x, this.height / 2, this.Features[j][1]));
+        }
+    }
+
+    this.autobuy = function() {
+        if(this.count_fishes() < AutoBuyLimit) {
+            this.add_entity(create_default_fish());
+        }
+        return 20;
+    }
+
+    this.mousedownhandler = function() {
+        console.log('click');
+        this.renderer.addEventListener('onmousemotion',
+                this.mousemotionhandler.bind(this))
+    }
+
+    this.mouseuphandler = function() {
+        console.log('click');
+        this.renderer.removeEventListener('onmousemotion',
+                this.mousmotionhandler.bind(this))
+    }
+
+    this.mousemotionhandler = function(evt) {
+        console.log('motion ' + evt);
+    }
+
+    this.initialize = function(renderer) {
+        this.renderer = renderer
+        this.renderer.addEventListener('onmousedown',
+                this.mousedownhandler.bind(this));
+        this.renderer.addEventListener('onmouseup',
+                this.mouseuphandler.bind(this));
+        for(var i = 0, f; f = this.Features[i]; i++) {
+            this.renderer.resource.add_sprite(f[1], 'aquarium/images/' + f[1] + '.png');
+        }
+        for(var i = 0, f; f = FishTypes[i]; i++) {
+            this.renderer.resource.add_sprite(f[0], 'aquarium/images/' + f[0] + '.png');
+        }
+
+        this.rebuild_features(10);
+
+        // Add initial fishes.
+        console.log('adding fishes ' + AutoBuyLimit);
+        for(var i = 0; i < AutoBuyLimit; i++) {
+            this.add_entity(this.create_default_fish());
+        }
+    }
+}
+
+aquarium.Renderer = function() {
+    this.world = undefined;
+
+    this.steppers = [];
+
+    this.add_frame_callback = function(func) {
+        this.steppers.push([0, func]);
+    }
+
+    this.current_frame = 0;
+
+    this.frame = function() {
+        // Steps through the world.
+        for(var i = 0, stepper; stepper = this.steppers[i]; i++) {
+            if(this.current_frame >= stepper[0]) {
+                stepper[0] += stepper[1]();
+				console.log("stepper: " + stepper[0]); 
+            }
+        }
+        this.current_frame++;
+        window.webkitRequestAnimationFrame(this.frame.bind(this));
+		//window.setTimeout(this.frame.bind(this), 1000 / 60);
+    }
+
+    this.addEventListener = function(name, callback) {
+        this.canvas.addEventListener(name, callback, false);
+    }
+    this.removeEventListener = function(name, callback) {
+        this.canvas.removeEventListener(name, callback, false);
+    }
+
+    this.initialize = function(world) {
+        this.world = world;
+        this.world.initialize(this);
+        this.add_frame_callback(this.world.step.bind(this.world));
+
+        this.resource.load();
+        this.resource.callback = this.setup.bind(this);
+    }
+
+    this.setup = function() {
+        this.frame();
+
+        for(var i = 0, e; e = this.resource.entries[i]; i++) {
+            var img = e.texture;
+            e.texture = texure_id;
+        }
+    }
+
+    this.resource = new Resource();
+}
+
+aquarium.CanvasRenderer = function(canvas_id) {
+    aquarium.Renderer.call(this);
+    this.canvas = document.getElementById(canvas_id);
+    this.context = this.canvas.getContext('2d');
+
+    this.render = function() {
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.world.render();
+        for(var i = 0, e; e = this.world.entities[i]; i++) {
+            var img = this.resource.entries[e.resource_id];
+
+            var scale = e.size / Math.max(img.width, img.height);
+            if(e.type != aquarium.FeatureType) {
+                this.context.drawImage(img, 0, 0, img.width, img.height,
+                        this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
+                        this.world.width * 0.5 + e.pos.y + img.height * 0.5 * scale,
+                        img.width * scale, img.height * scale);
+            } else {
+                this.context.drawImage(img, 0, 0, img.width, img.height,
+                        this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
+                        this.world.width * 0.5 + e.pos.y - img.height * scale,
+                        img.width * scale, img.height * scale);
+            }
+        }
+
+        // Draw boids
+        /*gl.useProgram();
+        for(var i=0, e; e = this.world.entities[i]; i++) {
+            if(e.type != BoidType) continue
+
+            gl.drawArrays();
+        }
+        gl.teardown();*/
+
+
+        return 2;
+    }
+
+    this.add_frame_callback(this.render.bind(this));
+}
+
+var Resource = function() {
+    this.entries = {};
+    this.to_load = [];
+    this.callback = null;
+
+    this.data_loaded = function(img, evt) {
+        var count = 0;
+        for(var id in this.to_load) {
+            if(this.to_load[id] == img) {
+                this.entries[id] = {'texture': img, 'center': [0.5, 0.5],
+                        'width': 0.1, 'height': 0.1}
+                delete this.to_load[id];
+                count--;
+            }
+            count++;
+        }
+
+        if(count == 0) {
+            // Remove buffers.
+            if(this.callback != null)
+                this.callback();
+        }
+    }
+
+    this.add_sprite = function(id, filename) {
+        this.to_load[id] = filename;
+    }
+
+    this.load = function() {
+        for(var id in this.to_load) {
+            var filename = this.to_load[id];
+            var img = new Image();
+            img.src = filename;
+            this.to_load[id] = img;
+            img.onload = this.data_loaded.bind(this);
+        }
+    }
+}
+
+aquarium.run = function(canvas_id) {
+    var renderer = new aquarium.WebGLRenderer(canvas_id);
+    var world = new aquarium.World(renderer, 300, 300);
+    renderer.initialize(world);
+}
+
+
 
 // MAIN 
 var projection = mat4.perspective(75, 4/3, 0.1, 10); 
@@ -1811,7 +3502,7 @@ var isRunning = true;
 function main() {
     gl = UTIL.createContext(640, 480); 
 
-	var camPos = vec3.create([0,1,2]);
+   	var camPos = vec3.create([0,1,2]);
 	var camNormal = vec3.create([0,0,-1]); 
 	var camDir = vec3.create([0,0,0]); 
 	var camUp = vec3.create([0,1,0]); 
@@ -1882,6 +3573,4 @@ function clear(gl) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); 
 	gl.enable(gl.DEPTH_TEST); 
 }
-
-window.onload = main; 
 
