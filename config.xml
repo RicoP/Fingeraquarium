@@ -4,5 +4,5 @@
   <author>AquariumApps</author>
   <description>Finger Aquarium</description>
   <rim:orientation mode="landscape"/>
-  <content src="../canvas.html"/>
+  <content src="canvas.html"/>
 </widget>
