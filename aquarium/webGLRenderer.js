@@ -1,7 +1,8 @@
-aquarium.WebGLRenderer = function(canvas_id) {
-    aquarium.Renderer.call(this);
+aquarium.WebGLRenderer = function(canvas_id, root) {
+    aquarium.Renderer.call(this, root);
     this.canvas = document.getElementById(canvas_id);
-	gl = WebGLDebugUtils.makeDebugContext(this.canvas.getContext("experimental-webgl", {alpha : false, preserveDrawingBuffer : true}).getSafeContext()); 
+	//gl = WebGLDebugUtils.makeDebugContext(this.canvas.getContext("experimental-webgl", {alpha : false, preserveDrawingBuffer : true}).getSafeContext()); 
+	gl = this.canvas.getContext("experimental-webgl", {alpha : false, preserveDrawingBuffer : true}); 
 
 	var renderEntity = getRenderFunc(); 
 
@@ -11,6 +12,8 @@ aquarium.WebGLRenderer = function(canvas_id) {
 	var camUp = vec3.create([0,1,0]); 
 	var camera = mat4.lookAt(camPos, vec3.add(camPos, camNormal, camDir), camUp);
 	var projection = mat4.perspective(75, 4/3, 0.1, 10); 
+	var canvasWidth = 1024; 
+	var canvasHeight = 600; 
 
     this.render = function() {
 		console.log("renderer"); 
@@ -18,11 +21,10 @@ aquarium.WebGLRenderer = function(canvas_id) {
 
         for(var i = 0, e; e = this.world.entities[i]; i++) {
 			// {pos, size, direction, speed, Age, sex }
-
-            var resource = this.resource.entries[e.resource_id];
 			// {texture, center, width, height}
+            var resource = this.resource.entries[e.resource_id];
 					
-			renderEntity(projection, camera, resource.texture, e.pos); 
+			renderEntity(projection, camera, resource.texture, e.pos, e.size, resource.center, resource.width, resource.height); 
         }
 
         return 1;
@@ -92,7 +94,9 @@ aquarium.WebGLRenderer = function(canvas_id) {
 		gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0); 
 		gl.enableVertexAttribArray(1); 		
 
-		return function(projection, camera, texture, position) {
+		return function(projection, camera, texture, position, size, center, width, height) {
+			// {pos, size, direction, speed, Age, sex }
+			// {texture, center, width, height}
 			var modelview = mat4.identity(); 
 			mat4.translate(modelview, [position.x / 150, position.y / 150, -4]); 
 			mat4.rotateX(modelview, 1 / 1000 * Date.now() * Math.PI / 2); 
@@ -122,7 +126,7 @@ aquarium.WebGLRenderer = function(canvas_id) {
 	}
 
 	function clear(gl) {
-    	gl.viewport(0, 0, 640, 480); 
+    	gl.viewport(0, 0, canvasWidth, canvasHeight); 
 	    gl.clearColor(97 / 256, 149 / 256, 237 / 256, 1); 
 	    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); 
 		gl.enable(gl.DEPTH_TEST); 
