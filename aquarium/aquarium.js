@@ -15,58 +15,58 @@ Function.prototype.bind = function(obj) {
 aquarium = {};
 
 // --- Convenience methods.
-create_fish = function(world, x, y, value) {
+aquarium.create_fish = function(world, x, y, value) {
     // Create a fish and select its characterists from FishTypes based on its
     // value.
-    var new_value = Math.min(uniform(value / 2, value), FishTypes.length);
+    var new_value = Math.min(aquarium.uniform(value / 2, value), FishTypes.length);
     var type = FishTypes[Math.floor(new_value)];
 
     console.log('creating fish ', type);
     var pixmap = type[0];
-    var max_age = uniform(type[1], type[2]);
-    var energy = uniform(type[3], type[4]);
-    var avg_speed = uniform(type[5], type[6]);
-    var breed_time = uniform(type[7], type[8]);
+    var max_age = aquarium.uniform(type[1], type[2]);
+    var energy = aquarium.uniform(type[3], type[4]);
+    var avg_speed = aquarium.uniform(type[5], type[6]);
+    var breed_time = aquarium.uniform(type[7], type[8]);
 
-    return new Boid(world,
+    return new aquarium.Boid(world,
             x, y, pixmap, new_value, max_age, energy, avg_speed, breed_time);
 }
 
-distance = function(x, y) {
+aquarium.distance = function(x, y) {
     // Returns the distance of a vector to the origin.
     return Math.sqrt(x * x + y * y);
 }
 
-angle_between = function(a_x, a_y, b_x, b_y) {
+aquarium.angle_between = function(a_x, a_y, b_x, b_y) {
     // Returns the angle between two vectors.
-    var d = distance(a_x, a_y) * distance(b_x, b_y);
+    var d = aquarium.distance(a_x, a_y) * aquarium.distance(b_x, b_y);
     if(d < 0.01) return 0;
     return Math.acos((a_x * b_x + a_y * b_y) / d);
 }
 
-uniform = function(a, b) {
+aquarium.uniform = function(a, b) {
     // Convenience method to return a float between a and b.
     return a + Math.random() * (b - a);
 }
 
-delta = function(p1, p2) {
+aquarium.delta = function(p1, p2) {
     // Difference between two vectors.
-    return new Point(p2.x - p1.x, p2.y - p1.y);
+    return new aquarium.Point(p2.x - p1.x, p2.y - p1.y);
 }
 
-scale = function(p1, s) {
+aquarium.scale = function(p1, s) {
     // Returns a scaled instance of a vector.
-    return new Point(p1.x * s, p1.y * s);
+    return new aquarium.Point(p1.x * s, p1.y * s);
 }
 
 // --- Classes.
-Point = function(x, y) {
+aquarium.Point = function(x, y) {
     // A generic vector with some utility functions.
     this.x = x;
     this.y = y;
 
     this.len = function() {
-        return distance(this.x, this.y);
+        return aquarium.distance(this.x, this.y);
     }
 
     this.add = function(other) {
@@ -97,16 +97,18 @@ Point = function(x, y) {
     }
 }
 
-Entity = function(world, x, y, size, resource_id) {
+aquarium.Entity = function(world, x, y, size, resource_id) {
     // The base class for visual objects like food, fishes and bubbles.
     this.type = undefined;
 
     this.world = world;
-    this.pos = new Point(x, y);
+    this.pos = new aquarium.Point(x, y);
     this.size = size;
-    this.direction = new Point(0, 0);
+    this.direction = new aquarium.Point(0, 0);
     this.speed = 0;
     this.resource_id = resource_id;
+    // TODO Mittelpunkt
+
 
     this.move = function() {
         this.pos.add(this.direction);
@@ -117,17 +119,18 @@ Entity = function(world, x, y, size, resource_id) {
     }
 }
 
-Feature = function(world, x, y, resource_id) {
-    Entity.call(this, world, x, y, uniform(20, 40), resource_id);
-    this.type = FeatureType;
+aquarium.Feature = function(world, x, y, resource_id, callback) {
+    aquarium.Entity.call(this, world, x, y, aquarium.uniform(20, 40), resource_id);
+    this.type = aquarium.FeatureType;
+    this.callback = callback;
 }
 
-Food = function(world, x, y, resource_id) {
+aquarium.Food = function(world, x, y, resource_id) {
     // Food to be eaten by fishes.
-    Entity.call(this, world, x, y, uniform(0.5, 1), resource_id);
-    this.type = FoodType;
+    aquarium.Entity.call(this, world, x, y, uniform(0.5, 1), resource_id);
+    this.type = aquarium.FoodType;
 
-    this.direction = new Point(0, 1);
+    this.direction = new aquarium.Point(0, 1);
     this.speed = uniform(2.5, 7.5);
 
     this.alive = function() {
@@ -145,13 +148,13 @@ Food = function(world, x, y, resource_id) {
     }
 }
 
-Bubble = function(world, x, y, resource_id) {
+aquarium.Bubble = function(world, x, y, resource_id) {
     // Just a bubble.
-    Entity.call(this, world, x, y, uniform(0.5, 1), resource_id);
+    aquarium.Entity.call(this, world, x, y, uniform(0.5, 1), resource_id);
 
-    this.type = BubbleType;
+    this.type = aquarium.BubbleType;
 
-    this.direction = new Point(0, -1);
+    this.direction = new aquarium.Point(0, -1);
     this.speed = uniform(10, 30);
 
     this.alive = function() {
@@ -159,17 +162,17 @@ Bubble = function(world, x, y, resource_id) {
     }
 }
 
-Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
+aquarium.Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
         breed_time) {
     // A boid that models the fishes behavior.
-    Entity.call(this, world, x, y, MinBoidSize, pixmap);
+    aquarium.Entity.call(this, world, x, y, MinBoidSize, pixmap);
 
     this.value = value;
     this.average_speed = average_speed;
     this.energy = energy;
     this.max_age = max_age;
     this.breed_time = breed_time;
-    this.type = BoidType;
+    this.type = aquarium.BoidType;
 
     this.acceleration = 0;
     this.speed = this.average_speed;
@@ -186,9 +189,9 @@ Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
     this.food_target = undefined;
     this.courtshipping = undefined;
 
-    this.separation = new Point(0, 0);
-    this.cohesion = new Point(0, 0);
-    this.alignment = new Point(0, 0);
+    this.separation = new aquarium.Point(0, 0);
+    this.cohesion = new aquarium.Point(0, 0);
+    this.alignment = new aquarium.Point(0, 0);
 
     this.paint_entity = this.paint;
 
@@ -215,17 +218,17 @@ Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
     this.perceives = function(other, dist) {
         if(dist > this.fov_radius) return false;
 
-        var fov_angle = angle_between(
+        var fov_angle = aquarium.angle_between(
                 -this.direction.x, -this.direction.y,
                 other.pos.x - this.pos.x, other.pos.y - this.pos.y);
 
         return fov_angle > 0.4;
     }
 
-    this.think = function(timestep, neighbors) {
-        var separation = new Point(0, 0);
-        var cohesion = new Point(0, 0);
-        var alignment = new Point(0, 0);
+    this.think = function(neighbors) {
+        var separation = new aquarium.Point(0, 0);
+        var cohesion = new aquarium.Point(0, 0);
+        var alignment = new aquarium.Point(0, 0);
 
         var visible = 0;
         var other_courtshipping = undefined;
@@ -235,7 +238,7 @@ Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
             var other = info[0], dist = info[1];
 
             switch(other.type) {
-                case BoidType:
+                case aquarium.BoidType:
                     if(other.courtshipping == this) {
                         other_courtshipping = this;
                     } else if(this.next_breed == 0 && this.energy > 0) {
@@ -258,19 +261,19 @@ Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
                         separation.y += Math.random();
                     } else {
                         separation.add(
-                                delta(other.pos, this.pos).scale(
+                                aquarium.delta(other.pos, this.pos).scale(
                                         1 / dist - 1 / this.fov_radius));
                     }
 
                     // Cohesion
                     cohesion.add(
-                            delta(this.pos, other.pos).scale(
+                            aquarium.delta(this.pos, other.pos).scale(
                                     1 / this.fov_radius));
 
                     // Alignment
                     alignment.add(other.direction);
                 break;
-                case FoodType:
+                case aquarium.FoodType:
                     if(
                             this.food_target == undefined || 
                             food_target_dist > dist) {
@@ -281,11 +284,11 @@ Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
             }
         }
 
-        var direction = new Point(0, 0);
+        var direction = new aquarium.Point(0, 0);
 
         // Direction from flocking behaviour.
         if(visible > 0) {
-            direction.add(new Point(
+            direction.add(new aquarium.Point(
                     (separation.x + cohesion.x + alignment.x) / (3 * visible),
                     (separation.y + cohesion.y + alignment.y) / (3 * visible)));
         } else {
@@ -296,7 +299,7 @@ Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
             this.randomize_step--;
         } else {
             this.randomize_step = 10 + Math.floor(Math.random() * 10);
-            var explore_dir = new Point(
+            var explore_dir = new aquarium.Point(
                     (0.5 - Math.random()) * 2, (0.5 - Math.random()) * 2);
             direction.scale(0.2).add(explore_dir.scale(0.8));
 
@@ -331,7 +334,7 @@ Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
             if(this.energy <= 0) {
                 this.courtshipping = undefined;
             } else if(chase_dir.len() < this.size) {
-                this.next_breed += this.breed_time;
+                this.next_breed = this.breed_time;
                 // Only add new boids if the upper limit is not reached.
                 if(world.entities.length < world.max_entities) {
                     world.add_entity(create_fish(
@@ -348,7 +351,7 @@ Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
         var rel_dist_center = dist_center / (this.world.width * 0.5);
 
         if(rel_dist_center > 0.9) {
-            direction = scale(this.pos, -1);
+            direction = aquarium.scale(this.pos, -1);
         }
 
         // Acceleration is decreasing over time.
@@ -356,7 +359,7 @@ Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
 
         this.speed = 0.5 * this.speed +
             this.average_speed * (1 + this.acceleration * 0.5) * 0.5;
-        this.energy = Math.max(0, this.energy - this.speed * timestep);
+        this.energy = Math.max(0, this.energy - this.speed);
         if(this.energy == 0)
             this.speed = Math.min(this.average_speed, this.speed);
 
@@ -368,15 +371,14 @@ Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
         this.direction.x = 0.75 * this.direction.x + 0.25 * direction.x;
         this.direction.y = 0.75 * this.direction.y + 0.225 * direction.y;
 
-        this.age += timestep;
+        this.age++;
         if(Math.ceil((this.age / this.max_age) * AgeStages) > this.age_stage) {
             this.age_stage++;
-            this.size = MinBoidSize +
-                (1 - MinBoidSize) * this.age_stage / AgeStages;
-            this.resize();
+            this.size = 20 * (MinBoidSize +
+                (1 - MinBoidSize) * this.age_stage / AgeStages);
         }
 
-        this.next_breed = Math.max(0, this.next_breed - timestep);
+        this.next_breed--;
 
         // Store values just in case they should be visualized.
         this.separation = separation;
@@ -393,6 +395,11 @@ Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
     }
 }
 
+aquarium.FeatureType = 0;
+aquarium.BoidType = 1;
+aquarium.FoodType = 2;
+aquarium.BubbleType = 3;
+
 aquarium.World = function(renderer, width, height) {
     this.renderer = renderer;
     this.width = width;
@@ -402,21 +409,11 @@ aquarium.World = function(renderer, width, height) {
     var BubbleTime = 2000;
     var MinAutofeedTime = 2000, MaxAutofeedTime = 5000;
     var AutoBuyLimit = 15, AutobuyTime = 2000;
-    var Features = [
+    this.Features = [
         [0.1, "castle"], [0.5, "seaweed1"], [0.5, "seaweed2"], [0.5, "seaweed3"],
         [0.1, "skull"], [0.1, "treasure"], [1, "sand1"], [1, "sand2"], [1, "sand3"]
     ];
 
-    FeatureType = 0;
-
-    // Food constants.
-    FoodType = 2;
-
-    // Bubble constants.
-    BubbleType = 3;
-
-    // Boid constants.
-    BoidType = 1;
     Male = 0; Female = 1;
     MinBoidSize = 0.5;
     AgeStages = 10;
@@ -446,14 +443,14 @@ aquarium.World = function(renderer, width, height) {
     this.features = [];
 
     this.max_entities = undefined;
-    this.sim_timestep = undefined;
     this.update_timestep = 1 / 10;
 
     this.create_default_fish = function() {
         var x_max = this.width / 2;
         var y_max = this.height / 2;
-        var fish = create_fish(this,
-                uniform(-x_max, x_max), uniform(-y_max, y_max), Math.random());
+        var fish = aquarium.create_fish(this,
+                aquarium.uniform(-x_max, x_max), aquarium.uniform(-y_max, y_max),
+                Math.random());
         return fish;
     }
 
@@ -476,11 +473,11 @@ aquarium.World = function(renderer, width, height) {
         // Collect dead entities.
         var dead = [];
 
-        /*for(var i=0, entity; entity=this.entities[i]; i++) {
+        for(var i=0, entity; entity=this.entities[i]; i++) {
             if(entity.alive()) continue;
 
             dead.push(i);
-        }*/
+        }
 
         dead.reverse();
         // Strange, this doesn't work with the above iteration style.
@@ -499,7 +496,7 @@ aquarium.World = function(renderer, width, height) {
         for(var a=0, boid_a; boid_a=this.entities[a]; a++) {
             for(var b=a+1, boid_b; boid_b=this.entities[b]; b++) {
                 // Calculate distance between boid a and b.
-                this.distances.push(delta(boid_a.pos, boid_b.pos).len());
+                this.distances.push(aquarium.delta(boid_a.pos, boid_b.pos).len());
            }
         }
 
@@ -517,7 +514,7 @@ aquarium.World = function(renderer, width, height) {
                 neighbors.push([other, dist]);
             }
 
-            entity.think(this.sim_timestep, neighbors);
+            entity.think(neighbors);
         }
 
         return 10;
@@ -525,36 +522,11 @@ aquarium.World = function(renderer, width, height) {
 
     this.render = function() {
         for(var i=0, entity; entity=this.entities[i]; i++) {
-            entity.pos.add(scale(
+            entity.pos.add(aquarium.scale(
                     entity.direction, entity.speed * this.update_timestep));
         }
     }
         
-    var bla = function() {
-        // Draw features.
-        for(var i = 0,f; f=this.features[i]; i++) {
-            this.context.drawImage(f[1], 0, 0, f[1].width, f[1].height,
-                    (this.canvas.width - f[1].width * 0.1) * f[0],
-                    this.canvas.height - f[1].height * 0.1,
-                    f[1].width * 0.1, f[1].height * 0.1);
-        }
-
-        // Draw entities.
-        this.context.save();
-        //this.context.translate(this.canvas.width / 2, this.canvas.height / 2)
-        for(var i = 0, e; e = this.entities[i]; i++) {
-
-            this.context.save();
-            this.context.translate(this.canvas.width / 2 + e.pos.x,
-                    this.canvas.height / 2 + e.pos.y);
-            e.paint(this.context);
-            this.context.restore();
-        }
-        this.context.restore();
-
-        return 2;
-    }
-
     this.add_entity = function(entity) {
         this.new_entities.push(entity);
     }
@@ -572,7 +544,7 @@ aquarium.World = function(renderer, width, height) {
     this.rebuild_features = function(feature_count) {
         // Calculate sum of weights.
         var sum_weights = 0;
-        for(var i = 0,f; f=Features[i]; i++) {
+        for(var i = 0,f; f=this.Features[i]; i++) {
             sum_weights += f[0];
         }
 
@@ -580,17 +552,17 @@ aquarium.World = function(renderer, width, height) {
         var vary_x = (1 / feature_count) * 0.5;
         for(var i = 0; i < feature_count; i++) {
             // Select a feature index i.
-            var j, r = uniform(0, sum_weights), current = 0;
-            for(j = 0; j < Features.length; j++) {
-                current += Features[j][0];
+            var j, r = aquarium.uniform(0, sum_weights), current = 0;
+            for(j = 0; j < this.Features.length; j++) {
+                current += this.Features[j][0];
                 if(r <= current) break;
             }
 
             var pos_x = (i / feature_count + vary_x * Math.random()) *
                     this.width - this.width / 2;
 
-            this.add_entity(new Feature(this,
-                        pos_x, this.height / 2, Features[j][1]));
+            this.add_entity(new aquarium.Feature(this,
+                        pos_x, this.height / 2, this.Features[j][1]));
         }
     }
 
@@ -601,8 +573,29 @@ aquarium.World = function(renderer, width, height) {
         return 20;
     }
 
-    this.initialize = function() {
-        for(var i = 0, f; f = Features[i]; i++) {
+    this.mousedownhandler = function() {
+        console.log('click');
+        this.renderer.addEventListener('onmousemotion',
+                this.mousemotionhandler.bind(this))
+    }
+
+    this.mouseuphandler = function() {
+        console.log('click');
+        this.renderer.removeEventListener('onmousemotion',
+                this.mousmotionhandler.bind(this))
+    }
+
+    this.mousemotionhandler = function(evt) {
+        console.log('motion ' + evt);
+    }
+
+    this.initialize = function(renderer) {
+        this.renderer = renderer
+        this.renderer.addEventListener('onmousedown',
+                this.mousedownhandler.bind(this));
+        this.renderer.addEventListener('onmouseup',
+                this.mouseuphandler.bind(this));
+        for(var i = 0, f; f = this.Features[i]; i++) {
             this.renderer.resource.add_sprite(f[1], 'images/' + f[1] + '.png');
         }
         for(var i = 0, f; f = FishTypes[i]; i++) {
@@ -643,7 +636,7 @@ aquarium.Renderer = function() {
 
     this.initialize = function(world) {
         this.world = world;
-        this.world.initialize();
+        this.world.initialize(this);
         this.add_frame_callback(this.world.step.bind(this.world));
 
         this.resource.load();
@@ -658,6 +651,13 @@ aquarium.CanvasRenderer = function(canvas_id) {
     this.canvas = document.getElementById(canvas_id);
     this.context = this.canvas.getContext('2d');
 
+    this.addEventListener = function(name, callback) {
+        this.canvas.addEventListener(name, callback, false);
+    }
+    this.removeEventListener = function(name, callback) {
+        this.canvas.removeEventListener(name, callback, false);
+    }
+
     this.render = function() {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.world.render();
@@ -665,7 +665,7 @@ aquarium.CanvasRenderer = function(canvas_id) {
             var img = this.resource.sprites[e.resource_id];
 
             var scale = e.size / Math.max(img.width, img.height);
-            if(e.type != FeatureType) {
+            if(e.type != aquarium.FeatureType) {
                 this.context.drawImage(img, 0, 0, img.width, img.height,
                         this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
                         this.world.width * 0.5 + e.pos.y + img.height * 0.5 * scale,
@@ -676,8 +676,17 @@ aquarium.CanvasRenderer = function(canvas_id) {
                         this.world.width * 0.5 + e.pos.y - img.height * scale,
                         img.width * scale, img.height * scale);
             }
-
         }
+
+        // Draw boids
+        /*gl.useProgram();
+        for(var i=0, e; e = this.world.entities[i]; i++) {
+            if(e.type != BoidType) continue
+
+            gl.drawArrays();
+        }
+        gl.teardown();*/
+
 
         return 2;
     }
