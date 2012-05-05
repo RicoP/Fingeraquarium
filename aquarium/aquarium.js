@@ -13,6 +13,7 @@ Function.prototype.bind = function(obj) {
 // Namespace.
 
 var aquarium = {};
+aquarium.initial_fishes = 15;
 
 //= webGLRenderer.js
 
@@ -414,7 +415,7 @@ aquarium.World = function(renderer) {
     // Constants.
     var BubbleTime = 2000;
     var MinAutofeedTime = 2000, MaxAutofeedTime = 5000;
-    var AutoBuyLimit = 1, AutobuyTime = 2000;
+    var AutobuyTime = 2000;
 
     Male = 0; Female = 1;
     MinBoidSize = 0.5;
@@ -556,7 +557,7 @@ aquarium.World = function(renderer) {
     }
 
     this.autobuy = function() {
-        if(this.count_fishes() < AutoBuyLimit) {
+        if(this.count_fishes() < aquarium.initial_fishes) {
             this.add_entity(create_default_fish());
         }
         return 20;
@@ -608,8 +609,8 @@ aquarium.World = function(renderer) {
         this.rebuild_features(0);
 
         // Add initial fishes.
-        console.log('adding fishes ' + AutoBuyLimit);
-        for(var i = 0; i < AutoBuyLimit; i++) {
+        console.log('adding fishes ' + aquarium.initial_fishes);
+        for(var i = 0; i < aquarium.initial_fishes; i++) {
             this.add_entity(this.create_default_fish());
         }
 
