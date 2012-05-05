@@ -353,7 +353,8 @@ aquarium.Boid = function(world, x, y, pixmap, value, max_age, energy, average_sp
         // Force boids back to the center of the fishbowl if they are to close
         // to the edge.
         var dist_center = this.pos.len();
-        var rel_dist_center = dist_center / (this.world.width * 0.5);
+        var rel_dist_center = dist_center /
+                (Math.min(this.world.width, this.world.height) * 0.5);
 
         if(rel_dist_center > 0.9) {
             direction = aquarium.scale(this.pos, -1);
@@ -589,13 +590,20 @@ aquarium.World = function(renderer) {
         this.feature_types = [];
         this.fish_types = [];
 
-        for(var name in this.renderer.resource.entries) {
-            var entry = this.renderer.resource.entries[name];
+        for(var type in this.renderer.resource.entries.types) {
+            var types = this.renderer.resource.entries.types[type];
 
-            if(entry.type == 'fish') {
-                this.fish_types.push([name, entry]);
-            } else if(entry.type == 'feature') {
-                this.feature_types.push([name, entry]);
+            if(type == 'fish') {
+                console.log(types);
+                for(var name in types) { 
+                    var entry = types[name];
+                    this.fish_types.push([name, entry]);
+                }
+            } else if(type == 'feature') {
+                for(var name in types) { 
+                    var entry = types[name];
+                    this.feature_types.push([name, entry]);
+                }
             }
         }
         this.rebuild_features(10);
@@ -680,19 +688,19 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.world.render();
         for(var i = 0, e; e = this.world.entities[i]; i++) {
-            var entry = this.resource.entries[e.resource_id];
-            var img = entry.texture;
+            console.log(this.resource.entries.textures);
+            var img = this.resource.entries.textures[e.resource_id];
 
             var scale = e.size / Math.max(img.width, img.height);
             if(e.type != aquarium.FeatureType) {
                 this.context.drawImage(img, 0, 0, img.width, img.height,
                         this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
-                        this.world.width * 0.5 + e.pos.y + img.height * 0.5 * scale,
+                        this.world.height * 0.5 + e.pos.y + img.height * 0.5 * scale,
                         img.width * scale, img.height * scale);
             } else {
                 this.context.drawImage(img, 0, 0, img.width, img.height,
                         this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
-                        this.world.width * 0.5 + e.pos.y - img.height * scale,
+                        this.world.height * 0.5 + e.pos.y - img.height * scale,
                         img.width * scale, img.height * scale);
             }
         }
@@ -717,8 +725,8 @@ Resource = function(root) {
     this.to_load = [];
     this.callback = null;
 
-    this.img_loaded = function(img, entry) {
-        entry.texture = img;
+    this.img_loaded = function(img, name) {
+        this.entries.textures[name] = img;
         this.count--;
 
         if(this.count == 0) {
@@ -731,18 +739,19 @@ Resource = function(root) {
     this.load = function(data) {
         this.entries = data;
         this.count = 0;
-        for(var name in data) {
-            var entry = data[name];
-            if(entry.texture == undefined) continue;
+        console.log(data);
+        for(var name in data.textures) {
+            console.log(name);
+            var entry = data.textures[name];
             var img = new Image();
             // FIXME UUUUGGGLLLYYY
             var that = this;
-            img.onload = (function(entry, thatimg) { 
+            img.onload = (function(name, thatimg) { 
                 return function(evt) {
-                    that.img_loaded(thatimg, entry);
+                    that.img_loaded(thatimg, name);
                 };
-            })(entry, img);
-            img.src = root + entry.texture;
+            })(name, img);
+            img.src = root + name + '.png';
             this.count++;
         }
     }
