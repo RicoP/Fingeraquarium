@@ -20,18 +20,21 @@ var aquarium = {};
 aquarium.create_fish = function(world, x, y, value) {
     // Create a fish and select its characterists from FishTypes based on its
     // value.
-    var new_value = Math.min(aquarium.uniform(value / 2, value), FishTypes.length);
-    var type = FishTypes[Math.floor(new_value)];
+    var new_value = Math.min(aquarium.uniform(value / 2, value), 
+            world.fish_types.length);
+    var entry = world.fish_types[Math.floor(new_value)];
+    var resource_id = entry[0];
+    var resource = entry[1];
 
-    console.log('creating fish ', type);
-    var pixmap = type[0];
-    var max_age = aquarium.uniform(type[1], type[2]);
-    var energy = aquarium.uniform(type[3], type[4]);
-    var avg_speed = aquarium.uniform(type[5], type[6]);
-    var breed_time = aquarium.uniform(type[7], type[8]);
+    var max_age = aquarium.uniform(resource.max_age[0], resource.max_age[1]);
+    var energy = aquarium.uniform(resource.energy[0], resource.energy[1]);
+    var avg_speed = aquarium.uniform(
+            resource.avg_speed[0], resource.avg_speed[1]);
+    var breed_time = aquarium.uniform(
+            resource.breed_time[0], resource.breed_time[1]);
 
     return new aquarium.Boid(world,
-            x, y, pixmap, new_value, max_age, energy, avg_speed, breed_time);
+            x, y, resource_id, new_value, max_age, energy, avg_speed, breed_time);
 }
 
 aquarium.distance = function(x, y) {
@@ -402,40 +405,20 @@ aquarium.BoidType = 1;
 aquarium.FoodType = 2;
 aquarium.BubbleType = 3;
 
-aquarium.World = function(renderer, width, height) {
+aquarium.World = function(renderer) {
     this.renderer = renderer;
-    this.width = width;
-    this.height = height;
+    this.width = renderer.canvas.width;
+    this.height = renderer.canvas.height;
 
     // Constants.
     var BubbleTime = 2000;
     var MinAutofeedTime = 2000, MaxAutofeedTime = 5000;
     var AutoBuyLimit = 15, AutobuyTime = 2000;
-    this.Features = [
-        [0.1, "castle"], [0.5, "seaweed1"], [0.5, "seaweed2"], [0.5, "seaweed3"],
-        [0.1, "skull"], [0.1, "treasure"], [1, "sand1"], [1, "sand2"], [1, "sand3"]
-    ];
 
     Male = 0; Female = 1;
     MinBoidSize = 0.5;
     AgeStages = 10;
     ShowInfo = false;
-
-    // FishType description:
-    // [
-    //      pixmap, min_age, max_age, min_energy, max_energy,
-    //      min_avg_speed, max_avg_speed, min_breedtime, max_breedtime
-    // ]
-
-    FishTypes = [
-        ["fish1", 3 * 60, 10 * 60, 50, 100, 10, 20, 10, 30],
-        ["pinkfish", 3 * 60, 10 * 60, 100, 100, 10, 30, 10, 30],
-        ["fish2", 3 * 60, 10 * 60, 100, 100, 10, 30, 10, 30],
-        ["fish4", 3 * 60, 10 * 60, 100, 100, 10, 30, 10, 30],
-        ["fish3", 3 * 60, 10 * 60, 100, 100, 20, 30, 10, 30],
-        ["seahorse", 3 * 60, 6 * 60, 100, 100, 10, 20, 10, 30],
-        ["jaguarshark", 3 * 60, 6 * 60, 100, 100, 20, 30, 10, 30]
-    ];
 
     // Container for all entities.
     this.entities = [];
@@ -495,6 +478,9 @@ aquarium.World = function(renderer, width, height) {
 
         // Update distances between entities.
         this.distances = [];
+
+        if(this.entities.length == 0) return;
+
         for(var a=0, boid_a; boid_a=this.entities[a]; a++) {
             for(var b=a+1, boid_b; boid_b=this.entities[b]; b++) {
                 // Calculate distance between boid a and b.
@@ -546,8 +532,8 @@ aquarium.World = function(renderer, width, height) {
     this.rebuild_features = function(feature_count) {
         // Calculate sum of weights.
         var sum_weights = 0;
-        for(var i = 0,f; f=this.Features[i]; i++) {
-            sum_weights += f[0];
+        for(var i = 0,f; f=this.feature_types[i]; i++) {
+            sum_weights += f[1].probability;
         }
 
         // Rebuild features.
@@ -555,8 +541,8 @@ aquarium.World = function(renderer, width, height) {
         for(var i = 0; i < feature_count; i++) {
             // Select a feature index i.
             var j, r = aquarium.uniform(0, sum_weights), current = 0;
-            for(j = 0; j < this.Features.length; j++) {
-                current += this.Features[j][0];
+            for(j = 0; j < this.feature_types.length; j++) {
+                current += this.feature_types[j][1].probability;
                 if(r <= current) break;
             }
 
@@ -564,7 +550,7 @@ aquarium.World = function(renderer, width, height) {
                     this.width - this.width / 2;
 
             this.add_entity(new aquarium.Feature(this,
-                        pos_x, this.height / 2, this.Features[j][1]));
+                        pos_x, this.height / 2, this.feature_types[j][0]));
         }
     }
 
@@ -597,13 +583,21 @@ aquarium.World = function(renderer, width, height) {
                 this.mousedownhandler.bind(this));
         this.renderer.addEventListener('onmouseup',
                 this.mouseuphandler.bind(this));
-        for(var i = 0, f; f = this.Features[i]; i++) {
-            this.renderer.resource.add_sprite(f[1], 'aquarium/images/' + f[1] + '.png');
-        }
-        for(var i = 0, f; f = FishTypes[i]; i++) {
-            this.renderer.resource.add_sprite(f[0], 'aquarium/images/' + f[0] + '.png');
-        }
+    }
 
+    this.setup = function() {
+        this.feature_types = [];
+        this.fish_types = [];
+
+        for(var name in this.renderer.resource.entries) {
+            var entry = this.renderer.resource.entries[name];
+
+            if(entry.type == 'fish') {
+                this.fish_types.push([name, entry]);
+            } else if(entry.type == 'feature') {
+                this.feature_types.push([name, entry]);
+            }
+        }
         this.rebuild_features(10);
 
         // Add initial fishes.
@@ -611,10 +605,21 @@ aquarium.World = function(renderer, width, height) {
         for(var i = 0; i < AutoBuyLimit; i++) {
             this.add_entity(this.create_default_fish());
         }
+
+        this.renderer.setup();
     }
 }
 
 aquarium.Renderer = function() {
+    // FIXME Ugly
+    var requestAnimationFrame = window.requestAnimationFrame       || 
+        window.webkitRequestAnimationFrame || 
+        window.mozRequestAnimationFrame    || 
+        window.oRequestAnimationFrame      || 
+        window.msRequestAnimationFrame     || 
+        function( callback ){
+            window.setTimeout(callback, 1000 / 60);
+        };
     this.world = undefined;
 
     this.steppers = [];
@@ -625,17 +630,22 @@ aquarium.Renderer = function() {
 
     this.current_frame = 0;
 
+    this.last_time = Date.now();
+
     this.frame = function() {
         // Steps through the world.
-        for(var i = 0, stepper; stepper = this.steppers[i]; i++) {
-            if(this.current_frame >= stepper[0]) {
-                stepper[0] += stepper[1]();
-				console.log("stepper: " + stepper[0]); 
+        var time = Date.now();
+        while(time - this.last_time >= 20) {
+            this.last_time += 20;
+
+            for(var i = 0, stepper; stepper = this.steppers[i]; i++) {
+                if(this.current_frame >= stepper[0]) {
+                    stepper[0] += stepper[1]();
+                }
             }
+            this.current_frame++;
         }
-        this.current_frame++;
-        window.webkitRequestAnimationFrame(this.frame.bind(this));
-		//window.setTimeout(this.frame.bind(this), 1000 / 60);
+        requestAnimationFrame(this.frame.bind(this));
     }
 
     this.addEventListener = function(name, callback) {
@@ -645,22 +655,17 @@ aquarium.Renderer = function() {
         this.canvas.removeEventListener(name, callback, false);
     }
 
-    this.initialize = function(world) {
+    this.initialize = function(world, data) {
         this.world = world;
         this.world.initialize(this);
         this.add_frame_callback(this.world.step.bind(this.world));
 
-        this.resource.load();
-        this.resource.callback = this.setup.bind(this);
+        this.resource.load(data);
+        this.resource.callback = this.world.setup.bind(this.world);
     }
 
     this.setup = function() {
         this.frame();
-
-        for(var i = 0, e; e = this.resource.entries[i]; i++) {
-            var img = e.texture;
-            e.texture = texure_id;
-        }
     }
 
     this.resource = new Resource();
@@ -675,7 +680,8 @@ aquarium.CanvasRenderer = function(canvas_id) {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.world.render();
         for(var i = 0, e; e = this.world.entities[i]; i++) {
-            var img = this.resource.entries[e.resource_id];
+            var entry = this.resource.entries[e.resource_id];
+            var img = entry.texture;
 
             var scale = e.size / Math.max(img.width, img.height);
             if(e.type != aquarium.FeatureType) {
@@ -700,7 +706,6 @@ aquarium.CanvasRenderer = function(canvas_id) {
         }
         gl.teardown();*/
 
-
         return 2;
     }
 
@@ -712,42 +717,39 @@ var Resource = function() {
     this.to_load = [];
     this.callback = null;
 
-    this.data_loaded = function(img, evt) {
-        var count = 0;
-        for(var id in this.to_load) {
-            if(this.to_load[id] == img) {
-                this.entries[id] = {'texture': img, 'center': [0.5, 0.5],
-                        'width': 0.1, 'height': 0.1}
-                delete this.to_load[id];
-                count--;
-            }
-            count++;
-        }
+    this.img_loaded = function(img, entry) {
+        entry.texture = img;
+        this.count--;
 
-        if(count == 0) {
+        if(this.count == 0) {
             // Remove buffers.
             if(this.callback != null)
                 this.callback();
         }
     }
 
-    this.add_sprite = function(id, filename) {
-        this.to_load[id] = filename;
-    }
-
-    this.load = function() {
-        for(var id in this.to_load) {
-            var filename = this.to_load[id];
+    this.load = function(data) {
+        this.entries = data;
+        this.count = 0;
+        for(var name in data) {
+            var entry = data[name];
+            if(entry.texture == undefined) continue;
             var img = new Image();
-            img.src = filename;
-            this.to_load[id] = img;
-            img.onload = this.data_loaded.bind(this);
+            // FIXME UUUUGGGLLLYYY
+            var that = this;
+            img.onload = (function(entry, thatimg) { 
+                return function(evt) {
+                    that.img_loaded(thatimg, entry);
+                };
+            })(entry, img);
+            img.src = entry.texture;
+            this.count++;
         }
     }
 }
 
 aquarium.run = function(canvas_id) {
-    var renderer = new aquarium.WebGLRenderer(canvas_id);
-    var world = new aquarium.World(renderer, 300, 300);
-    renderer.initialize(world);
+    var renderer = new aquarium.CanvasRenderer(canvas_id);
+    var world = new aquarium.World(renderer);
+    renderer.initialize(world, data);
 }
