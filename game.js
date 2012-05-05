@@ -2647,23 +2647,21 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
         for(var i = 0, e; e = this.world.entities[i]; i++) {
 			// {pos, size, direction, speed, Age, sex }
 			// {texture, center, width, height}
-            var resource = this.resource.entries[e.resource_id];
-					
-			renderEntity(projection, camera, resource.texture, e.pos, e.size, resource.center, resource.width, resource.height); 
+            var texture = this.resource.entries.textures[e.resource_id];
+			renderEntity(camera, texture, e.pos, e.size /*, resource.center, resource.width, resource.height*/); 
         }
 
-        return 1;
+        return 2;
     }
 
     this.add_frame_callback(this.render.bind(this));
 
 	this.setup = function() {
 		console.log("setup"); 
-		for(var resourceId in this.resource.entries) {
-            var resource = this.resource.entries[resourceId];
+		for(var resourceId in this.resource.entries.textures) {
+            var image = this.resource.entries.textures[resourceId];
 			// {texture, center}
 			var glTexture = gl.createTexture(); 
-			var image = resource.texture; 
 
 			gl.bindTexture(gl.TEXTURE_2D, glTexture);
 			gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
@@ -2672,7 +2670,7 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 			gl.bindTexture(gl.TEXTURE_2D, null);
 
-			resource.texture = glTexture; 
+			this.resource.entries.textures[resourceId] =  glTexture; 
         }
 	
 		this.frame(); 
@@ -2726,11 +2724,11 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 		var vProjectionIndx = gl.getUniformLocation(program, "vProjection");
 		gl.uniformMatrix4fv(vProjectionIndx, false, projection);
 
-		return function(projection, camera, texture, position, size, center, width, height) {
+		return function(camera, texture, position, size) {
 			// {pos, size, direction, speed, Age, sex }
 			// {texture, center, width, height}
 			var modelview = mat4.identity(); 
-			mat4.translate(modelview, [position.x / 150, position.y / 150, -4]); 
+			mat4.translate(modelview, [position.x / canvasWidth, position.y / canvasHeight, -4]); 
 			mat4.rotateX(modelview, 1 / 1000 * Date.now() * Math.PI / 2); 
 			mat4.scale(modelview, [1,1,1]); 
 
@@ -3104,7 +3102,8 @@ aquarium.Boid = function(world, x, y, pixmap, value, max_age, energy, average_sp
         // Force boids back to the center of the fishbowl if they are to close
         // to the edge.
         var dist_center = this.pos.len();
-        var rel_dist_center = dist_center / (this.world.width * 0.5);
+        var rel_dist_center = dist_center /
+                (Math.min(this.world.width, this.world.height) * 0.5);
 
         if(rel_dist_center > 0.9) {
             direction = aquarium.scale(this.pos, -1);
@@ -3340,13 +3339,19 @@ aquarium.World = function(renderer) {
         this.feature_types = [];
         this.fish_types = [];
 
-        for(var name in this.renderer.resource.entries) {
-            var entry = this.renderer.resource.entries[name];
+        for(var type in this.renderer.resource.entries.types) {
+            var types = this.renderer.resource.entries.types[type];
 
-            if(entry.type == 'fish') {
-                this.fish_types.push([name, entry]);
-            } else if(entry.type == 'feature') {
-                this.feature_types.push([name, entry]);
+            if(type == 'fish') {
+                for(var name in types) { 
+                    var entry = types[name];
+                    this.fish_types.push([name, entry]);
+                }
+            } else if(type == 'feature') {
+                for(var name in types) { 
+                    var entry = types[name];
+                    this.feature_types.push([name, entry]);
+                }
             }
         }
         this.rebuild_features(10);
@@ -3431,19 +3436,18 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.world.render();
         for(var i = 0, e; e = this.world.entities[i]; i++) {
-            var entry = this.resource.entries[e.resource_id];
-            var img = entry.texture;
+            var img = this.resource.entries.textures[e.resource_id];
 
             var scale = e.size / Math.max(img.width, img.height);
             if(e.type != aquarium.FeatureType) {
                 this.context.drawImage(img, 0, 0, img.width, img.height,
                         this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
-                        this.world.width * 0.5 + e.pos.y + img.height * 0.5 * scale,
+                        this.world.height * 0.5 + e.pos.y + img.height * 0.5 * scale,
                         img.width * scale, img.height * scale);
             } else {
                 this.context.drawImage(img, 0, 0, img.width, img.height,
                         this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
-                        this.world.width * 0.5 + e.pos.y - img.height * scale,
+                        this.world.height * 0.5 + e.pos.y - img.height * scale,
                         img.width * scale, img.height * scale);
             }
         }
@@ -3468,8 +3472,8 @@ Resource = function(root) {
     this.to_load = [];
     this.callback = null;
 
-    this.img_loaded = function(img, entry) {
-        entry.texture = img;
+    this.img_loaded = function(img, name) {
+        this.entries.textures[name] = img;
         this.count--;
 
         if(this.count == 0) {
@@ -3482,18 +3486,19 @@ Resource = function(root) {
     this.load = function(data) {
         this.entries = data;
         this.count = 0;
-        for(var name in data) {
-            var entry = data[name];
-            if(entry.texture == undefined) continue;
+        console.log(data);
+        for(var name in data.textures) {
+            console.log(name);
+            var entry = data.textures[name];
             var img = new Image();
             // FIXME UUUUGGGLLLYYY
             var that = this;
-            img.onload = (function(entry, thatimg) { 
+            img.onload = (function(name, thatimg) { 
                 return function(evt) {
-                    that.img_loaded(thatimg, entry);
+                    that.img_loaded(thatimg, name);
                 };
-            })(entry, img);
-            img.src = root + entry.texture;
+            })(name, img);
+            img.src = root + name + '.png';
             this.count++;
         }
     }

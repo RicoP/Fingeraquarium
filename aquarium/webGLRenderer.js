@@ -23,23 +23,21 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
         for(var i = 0, e; e = this.world.entities[i]; i++) {
 			// {pos, size, direction, speed, Age, sex }
 			// {texture, center, width, height}
-            var resource = this.resource.entries[e.resource_id];
-					
-			renderEntity(projection, camera, resource.texture, e.pos, e.size, resource.center, resource.width, resource.height); 
+            var texture = this.resource.entries.textures[e.resource_id];
+			renderEntity(camera, texture, e.pos, e.size /*, resource.center, resource.width, resource.height*/); 
         }
 
-        return 1;
+        return 2;
     }
 
     this.add_frame_callback(this.render.bind(this));
 
 	this.setup = function() {
 		console.log("setup"); 
-		for(var resourceId in this.resource.entries) {
-            var resource = this.resource.entries[resourceId];
+		for(var resourceId in this.resource.entries.textures) {
+            var image = this.resource.entries.textures[resourceId];
 			// {texture, center}
 			var glTexture = gl.createTexture(); 
-			var image = resource.texture; 
 
 			gl.bindTexture(gl.TEXTURE_2D, glTexture);
 			gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
@@ -48,7 +46,7 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 			gl.bindTexture(gl.TEXTURE_2D, null);
 
-			resource.texture = glTexture; 
+			this.resource.entries.textures[resourceId] =  glTexture; 
         }
 	
 		this.frame(); 
@@ -102,11 +100,11 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 		var vProjectionIndx = gl.getUniformLocation(program, "vProjection");
 		gl.uniformMatrix4fv(vProjectionIndx, false, projection);
 
-		return function(projection, camera, texture, position, size, center, width, height) {
+		return function(camera, texture, position, size) {
 			// {pos, size, direction, speed, Age, sex }
 			// {texture, center, width, height}
 			var modelview = mat4.identity(); 
-			mat4.translate(modelview, [position.x / 150, position.y / 150, -4]); 
+			mat4.translate(modelview, [position.x / canvasWidth, position.y / canvasHeight, -4]); 
 			mat4.rotateX(modelview, 1 / 1000 * Date.now() * Math.PI / 2); 
 			mat4.scale(modelview, [1,1,1]); 
 
