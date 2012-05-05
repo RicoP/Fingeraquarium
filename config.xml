@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:rim="http://www.blackberry.com/ns/widgets" version="1.0.3" rim:header="RIM-Widget:rim/widget">
+  <name>Finger Aquarium</name>
+  <author>AquariumApps</author>
+  <description>Finger Aquarium</description>
+  <rim:orientation mode="landscape"/>
+  <content src="../canvas.html"/>
+</widget>
