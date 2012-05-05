@@ -2639,6 +2639,7 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
     this.render = function() {
 		console.log("renderer"); 
 		clear(gl); 	
+		this.world.render(); 
 
         for(var i = 0, e; e = this.world.entities[i]; i++) {
 			// {pos, size, direction, speed, Age, sex }
@@ -2723,9 +2724,10 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 		return function(camera, texture, position, size) {
 			// {pos, size, direction, speed, Age, sex }
 			// {texture, center, width, height}
+			console.log(position.x + " " + position.y); 
 			var modelview = mat4.identity(); 
-			mat4.translate(modelview, [position.x / canvasWidth, position.y / canvasHeight, -4]); 
-			mat4.rotateX(modelview, 1 / 1000 * Date.now() * Math.PI / 2); 
+			mat4.translate(modelview, [0.5 + position.x / canvasWidth, 0.5 + position.y / canvasHeight, -4]); 
+			//mat4.rotateX(modelview, 1 / 1000 * Date.now() * Math.PI / 2); 
 			mat4.scale(modelview, [1,1,1]); 
 
 			gl.useProgram(program); 
@@ -3159,7 +3161,7 @@ aquarium.World = function(renderer) {
     // Constants.
     var BubbleTime = 2000;
     var MinAutofeedTime = 2000, MaxAutofeedTime = 5000;
-    var AutoBuyLimit = 15, AutobuyTime = 2000;
+    var AutoBuyLimit = 1, AutobuyTime = 2000;
 
     Male = 0; Female = 1;
     MinBoidSize = 0.5;
@@ -3350,7 +3352,7 @@ aquarium.World = function(renderer) {
                 }
             }
         }
-        this.rebuild_features(10);
+        this.rebuild_features(0);
 
         // Add initial fishes.
         console.log('adding fishes ' + AutoBuyLimit);
@@ -3500,7 +3502,13 @@ Resource = function(root) {
     }
 }
 
-aquarium.run = function(canvas_id, root) {
+aquarium.run_canvas = function(canvas_id, root) {
+    var renderer = new aquarium.CanvasRenderer(canvas_id, root);
+    var world = new aquarium.World(renderer);
+    renderer.initialize(world, data);
+}
+
+aquarium.run_webgl = function(canvas_id, root) {
     var renderer = new aquarium.WebGLRenderer(canvas_id, root);
     var world = new aquarium.World(renderer);
     renderer.initialize(world, data);

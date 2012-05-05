@@ -19,6 +19,7 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
     this.render = function() {
 		console.log("renderer"); 
 		clear(gl); 	
+		this.world.render(); 
 
         for(var i = 0, e; e = this.world.entities[i]; i++) {
 			// {pos, size, direction, speed, Age, sex }
@@ -103,9 +104,10 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 		return function(camera, texture, position, size) {
 			// {pos, size, direction, speed, Age, sex }
 			// {texture, center, width, height}
+			console.log(position.x + " " + position.y); 
 			var modelview = mat4.identity(); 
-			mat4.translate(modelview, [position.x / canvasWidth, position.y / canvasHeight, -4]); 
-			mat4.rotateX(modelview, 1 / 1000 * Date.now() * Math.PI / 2); 
+			mat4.translate(modelview, [0.5 + position.x / canvasWidth, 0.5 + position.y / canvasHeight, -4]); 
+			//mat4.rotateX(modelview, 1 / 1000 * Date.now() * Math.PI / 2); 
 			mat4.scale(modelview, [1,1,1]); 
 
 			gl.useProgram(program); 
