@@ -2,6 +2,11 @@ data = {
     'textures': {
         'fish1': undefined,
         'pinkfish': undefined,
+        'fish2': undefined,
+        'fish3': undefined,
+        'fish4': undefined,
+        'seahorse': undefined,
+        'jaguarshark': undefined,
         'castle': undefined,
         'seaweed1': undefined,
         'seaweed2': undefined,
@@ -24,64 +29,45 @@ data = {
                 'avg_speed': [10, 10],
                 'breed_time': [10, 30],
             },
-        /*
             'fish2': {
-                'texture': 'images/fish2.png',
-                'min_age':       3 * 60,
-                'max_age':       10 * 60,
-                'min_energy':    100,
-                'max_energy':    100,
-                'min_avg_speed': 10,
-                'max_avg_speed': 30,
-                'min_breedtime': 10,
-                'max_breedtime': 30
+                'texture': 'fish2',
+                'max_age': [3 * 60, 10 * 60],
+                'energy': [100, 100],
+                'avg_speed': [10, 30],
+                'breed_time': [10, 30],
             },
 
             'fish4': {
-                'texture': 'images/fish4.png',
-                'min_age':       3 * 60,
-                'max_age':       10 * 60,
-                'min_energy':    100,
-                'max_energy':    100,
-                'min_avg_speed': 10,
-                'max_avg_speed': 30,
-                'min_breedtime': 10,
-                'max_breedtime': 30
+                'texture': 'fish4',
+                'max_age': [3 * 60, 10 * 60],
+                'energy': [100, 100],
+                'avg_speed': [10, 30],
+                'breed_time': [10, 30],
             },
 
             'fish3': {
-                'texture': 'images/fish3.png',
+                'texture': 'fish3',
                 'max_age': [3 * 60, 10 * 60],
                 'energy': [100, 100],
-                'min_avg_speed': 20,
-                'max_avg_speed': 30,
-                'min_breedtime': 10,
-                'max_breedtime': 30
+                'avg_speed': [20, 30],
+                'breed_time': [10, 30],
             },
 
             'seahorse': {
-                'texture': 'images/seahorse.png',
-                'min_age':       3 * 60,
-                'max_age':       6 * 60,
-                'min_energy':    100,
-                'max_energy':    100,
-                'min_avg_speed': 10,
-                'max_avg_speed': 20,
-                'min_breedtime': 10,
-                'max_breedtime': 30
+                'texture': 'seahorse',
+                'max_age': [3 * 60, 10 * 60],
+                'energy': [100, 100],
+                'avg_speed': [10, 20],
+                'breed_time': [10, 30],
             },
 
             'jaguarshark': {
-                'texture': 'images/jaguarshark.png',
-                'min_age':       3 * 60,
-                'max_age':       6 * 60,
-                'min_energy':    100,
-                'max_energy':    100,
-                'min_avg_speed': 20,
-                'max_avg_speed': 30,
-                'min_breedtime': 10,
-                'max_breedtime': 30
-            },*/
+                'texture': 'jaguarshark',
+                'max_age': [3 * 60, 10 * 60],
+                'energy': [100, 100],
+                'avg_speed': [20, 30],
+                'breed_time': [10, 30],
+            },
         },
         'feature': {
             'castle': {
@@ -97,16 +83,14 @@ data = {
                 'probability': 0.1,
             },
         },
-        'button': {
-            'food': {
-                'texture': 'food',
-            }
-        },
     },
     'scenario': {
         'buttons': {
             'feed': {
-                'pos': [0.9, 0.9],
+                'texture': 'food',
+                'pos': [0.9, 0.1],
+                'size': 0.5,
+                'callback': 'start_food_drag',
             }
         }
     }
