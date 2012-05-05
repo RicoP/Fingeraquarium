@@ -403,15 +403,15 @@ aquarium.BoidType = 1;
 aquarium.FoodType = 2;
 aquarium.BubbleType = 3;
 
-aquarium.World = function(renderer, width, height) {
+aquarium.World = function(renderer) {
     this.renderer = renderer;
-    this.width = width;
-    this.height = height;
+    this.width = renderer.canvas.width;
+    this.height = renderer.canvas.height;
 
     // Constants.
     var BubbleTime = 2000;
     var MinAutofeedTime = 2000, MaxAutofeedTime = 5000;
-    var AutoBuyLimit = 1, AutobuyTime = 2000;
+    var AutoBuyLimit = 15, AutobuyTime = 2000;
 
     Male = 0; Female = 1;
     MinBoidSize = 0.5;
@@ -765,6 +765,6 @@ Resource = function() {
 
 aquarium.run = function(canvas_id) {
     var renderer = new aquarium.CanvasRenderer(canvas_id);
-    var world = new aquarium.World(renderer, 300, 300);
+    var world = new aquarium.World(renderer);
     renderer.initialize(world, data);
 }
