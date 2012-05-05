@@ -610,7 +610,7 @@ aquarium.World = function(renderer) {
     }
 }
 
-aquarium.Renderer = function() {
+aquarium.Renderer = function(root) {
     // FIXME Ugly
     var requestAnimationFrame = window.requestAnimationFrame       || 
         window.webkitRequestAnimationFrame || 
@@ -668,11 +668,11 @@ aquarium.Renderer = function() {
         this.frame();
     }
 
-    this.resource = new Resource();
+    this.resource = new Resource(root);
 }
 
-aquarium.CanvasRenderer = function(canvas_id) {
-    aquarium.Renderer.call(this);
+aquarium.CanvasRenderer = function(canvas_id, root) {
+    aquarium.Renderer.call(this, root);
     this.canvas = document.getElementById(canvas_id);
     this.context = this.canvas.getContext('2d');
 
@@ -712,7 +712,7 @@ aquarium.CanvasRenderer = function(canvas_id) {
     this.add_frame_callback(this.render.bind(this));
 }
 
-var Resource = function() {
+Resource = function(root) {
     this.entries = {};
     this.to_load = [];
     this.callback = null;
@@ -742,14 +742,14 @@ var Resource = function() {
                     that.img_loaded(thatimg, entry);
                 };
             })(entry, img);
-            img.src = entry.texture;
+            img.src = root + entry.texture;
             this.count++;
         }
     }
 }
 
-aquarium.run = function(canvas_id) {
-    var renderer = new aquarium.CanvasRenderer(canvas_id);
+aquarium.run = function(canvas_id, root) {
+    var renderer = new aquarium.CanvasRenderer(canvas_id, root);
     var world = new aquarium.World(renderer);
     renderer.initialize(world, data);
 }

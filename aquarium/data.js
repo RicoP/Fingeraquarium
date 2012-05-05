@@ -1,7 +1,7 @@
 data = {
     'fish1': {
         'type': 'fish',
-        'texture': 'images/fish1.png',
+        'texture': 'fish1.png',
         'max_age': [3 * 60, 10 * 60],
         'energy': [50, 100],
         'avg_speed': [10, 20],
@@ -10,7 +10,7 @@ data = {
 
     'pinkfish': {
         'type': 'fish',
-        'texture': 'images/pinkfish.png',
+        'texture': 'pinkfish.png',
         'max_age': [3 * 60, 10 * 60],
         'energy': [100, 100],
         'avg_speed': [10, 10],
@@ -19,7 +19,7 @@ data = {
 /*
     'fish2': {
         'type': 'fish',
-        'texture': 'images/fish2.png',
+        'texture': 'fish2.png',
         'min_age':       3 * 60,
         'max_age':       10 * 60,
         'min_energy':    100,
@@ -32,7 +32,7 @@ data = {
 
     'fish4': {
         'type': 'fish',
-        'texture': 'images/fish4.png',
+        'texture': 'fish4.png',
         'min_age':       3 * 60,
         'max_age':       10 * 60,
         'min_energy':    100,
@@ -45,7 +45,7 @@ data = {
 
     'fish3': {
         'type': 'fish',
-        'texture': 'images/fish3.png',
+        'texture': 'fish3.png',
         'max_age': [3 * 60, 10 * 60],
         'energy': [100, 100],
         'min_avg_speed': 20,
@@ -56,7 +56,7 @@ data = {
 
     'seahorse': {
         'type': 'fish',
-        'texture': 'images/seahorse.png',
+        'texture': 'seahorse.png',
         'min_age':       3 * 60,
         'max_age':       6 * 60,
         'min_energy':    100,
@@ -69,7 +69,7 @@ data = {
 
     'jaguarshark': {
         'type': 'fish',
-        'texture': 'images/jaguarshark.png',
+        'texture': 'jaguarshark.png',
         'min_age':       3 * 60,
         'max_age':       6 * 60,
         'min_energy':    100,
@@ -82,17 +82,17 @@ data = {
 
     'castle': {
         'type': 'feature',
-        'texture': 'images/castle.png',
+        'texture': 'castle.png',
         'probability': 0.1,
     },
     'seaweed1': {
         'type': 'feature',
-        'texture': 'images/seaweed1.png',
+        'texture': 'seaweed1.png',
         'probability': 0.1,
     },
     'seaweed2': {
         'type': 'feature',
-        'texture': 'images/seaweed2.png',
+        'texture': 'seaweed2.png',
         'probability': 0.1,
     },
     /*this.Features = [
