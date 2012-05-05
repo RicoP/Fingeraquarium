@@ -4,7 +4,6 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 	//gl = WebGLDebugUtils.makeDebugContext(this.canvas.getContext("experimental-webgl", {alpha : false, preserveDrawingBuffer : true}).getSafeContext()); 
 	gl = this.canvas.getContext("experimental-webgl", {alpha : false, preserveDrawingBuffer : true}); 
 
-	var renderEntity = getRenderFunc(); 
 
    	var camPos = vec3.create([0,0,0.5]);
 	var camNormal = vec3.create([0,0,-1]); 
@@ -14,6 +13,8 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 	var projection = mat4.perspective(75, 4/3, 0.1, 10); 
 	var canvasWidth = 1024; 
 	var canvasHeight = 600; 
+
+	var renderEntity = getRenderFunc(projection); 
 
     this.render = function() {
 		console.log("renderer"); 
@@ -53,7 +54,7 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 		this.frame(); 
 	}; 
 
-	function getRenderFunc() {
+	function getRenderFunc(projection) {
 		var vPositionIndx = 0; 
 		var vColorIndx = 1; 
 		var vTransIndx = 2; 
@@ -94,6 +95,13 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 		gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0); 
 		gl.enableVertexAttribArray(1); 		
 
+		gl.useProgram(program); 
+		//gl.enableVertexAttribArray(0); 
+		//gl.enableVertexAttribArray(1); 		
+		var fTexIndx = gl.getUniformLocation(program, "texture"); 
+		var vProjectionIndx = gl.getUniformLocation(program, "vProjection");
+		gl.uniformMatrix4fv(vProjectionIndx, false, projection);
+
 		return function(projection, camera, texture, position, size, center, width, height) {
 			// {pos, size, direction, speed, Age, sex }
 			// {texture, center, width, height}
@@ -109,10 +117,8 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 			var vModelViewIndx = gl.getUniformLocation(program, "vModelView");
 			gl.uniformMatrix4fv(vModelViewIndx, false, modelview);
 
-			var vProjectionIndx = gl.getUniformLocation(program, "vProjection");
-			gl.uniformMatrix4fv(vProjectionIndx, false, projection);
 
-			var fTexIndx = gl.getUniformLocation(program, "texture"); 
+			console.log("tex"); 
 			gl.activeTexture(gl.TEXTURE0); 
 			gl.bindTexture(gl.TEXTURE_2D, texture);
 			gl.uniform1i(fTexIndx, 0); 
@@ -121,7 +127,7 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 			gl.enableVertexAttribArray(0); 
 			gl.drawArrays(gl.TRIANGLES, 0, program.numVertices); 
 
-			gl.bindTexture(gl.TEXTURE_2D, null);
+			gl.bindTexture(gl.TEXTURE_2D, null);//*/
 		};
 	}
 
