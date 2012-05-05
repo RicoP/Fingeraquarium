@@ -1,6 +1,6 @@
-[submodule "lib/glsafecontext.js"]
-	path = lib/objloader.js
-	url = https://github.com/RicoP/objloader.js
-[submodule "lib/gl-matrix"]
-	path = lib/gl-matrix
+[submodule "gl-matrix"]
+	path = gl-matrix
 	url = https://github.com/toji/gl-matrix.git
+[submodule "objloader.js"]
+	path = objloader.js
+	url = https://github.com/RicoP/objloader.js
