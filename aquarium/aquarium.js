@@ -594,7 +594,6 @@ aquarium.World = function(renderer) {
             var types = this.renderer.resource.entries.types[type];
 
             if(type == 'fish') {
-                console.log(types);
                 for(var name in types) { 
                     var entry = types[name];
                     this.fish_types.push([name, entry]);
@@ -688,7 +687,6 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.world.render();
         for(var i = 0, e; e = this.world.entities[i]; i++) {
-            console.log(this.resource.entries.textures);
             var img = this.resource.entries.textures[e.resource_id];
 
             var scale = e.size / Math.max(img.width, img.height);
@@ -758,7 +756,7 @@ Resource = function(root) {
 }
 
 aquarium.run = function(canvas_id, root) {
-    var renderer = new aquarium.WebGLRenderer(canvas_id, root);
+    var renderer = new aquarium.CanvasRenderer(canvas_id, root);
     var world = new aquarium.World(renderer);
     renderer.initialize(world, data);
 }
