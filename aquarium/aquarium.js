@@ -634,6 +634,13 @@ aquarium.Renderer = function() {
         window.webkitRequestAnimationFrame(this.frame.bind(this));
     }
 
+    this.addEventListener = function(name, callback) {
+        this.canvas.addEventListener(name, callback, false);
+    }
+    this.removeEventListener = function(name, callback) {
+        this.canvas.removeEventListener(name, callback, false);
+    }
+
     this.initialize = function(world) {
         this.world = world;
         this.world.initialize(this);
@@ -659,13 +666,6 @@ aquarium.CanvasRenderer = function(canvas_id) {
     aquarium.Renderer.call(this);
     this.canvas = document.getElementById(canvas_id);
     this.context = this.canvas.getContext('2d');
-
-    this.addEventListener = function(name, callback) {
-        this.canvas.addEventListener(name, callback, false);
-    }
-    this.removeEventListener = function(name, callback) {
-        this.canvas.removeEventListener(name, callback, false);
-    }
 
     this.render = function() {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -696,6 +696,21 @@ aquarium.CanvasRenderer = function(canvas_id) {
         }
         gl.teardown();*/
 
+
+        return 2;
+    }
+
+    this.add_frame_callback(this.render.bind(this));
+}
+
+aquarium.WebGLRenderer = function(canvas_id) {
+    aquarium.Renderer.call(this);
+    this.canvas = document.getElementById(canvas_id);
+
+    this.render = function() {
+        for(var i = 0, e; e = this.world.entities[i]; i++) {
+            var resource = this.resource.entries[e.resource_id];
+        }
 
         return 2;
     }
