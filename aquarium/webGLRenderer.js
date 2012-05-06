@@ -16,7 +16,7 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 	var camUp = vec3.create([0,1,0]); 
 	var camera = mat4.lookAt(camPos, vec3.add(camPos, camNormal, camDir), camUp);
 	var projection = mat4.perspective(75, 4/3, 0.1, 8); 
-	//var projection = mat4.identity(); 
+	var identity = mat4.identity(); 
 	var canvasWidth = 1024; 
 	var canvasHeight = 600; 
 
@@ -61,12 +61,16 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 			}
 			this.world.render(); 
 
-			for(var i = 0, e; e = this.world.entities[i]; i++){
+			//Draw Background 			
+			var bgtex = this.resource.entries.textures["bg"];
+			renderEntity({ "camera" : camera, "projection" : identity, "texture" : bgtex, "position" : {"x" : 0, "y" : 0}, "size" : 700, "zDepth" : -1.1 });
 
+			for(var i = 0, e; e = this.world.entities[i]; i++){
 				// {pos, size, direction, speed, Age, sex }
 				// {texture, center, width, height}
 				var texture = this.resource.entries.textures[e.resource_id];
-				renderEntity(camera, texture, e.pos, e.size, zDepth[e.type] /*, resource.center, resource.width, resource.height*/); 
+				//console.log("entry: " + e.resource_id); 
+				renderEntity({ "camera" : camera, "projection" : projection, "texture" : texture, "position" : e.pos, "size" : e.size, "zDepth" : zDepth[e.type], "type" : e.type });
 			}
 
 			return 2;
@@ -79,6 +83,7 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 	this.setup = function() {
 		console.log("setup"); 
 		for(var resourceId in this.resource.entries.textures){
+			console.log("load: " + resourceId); 
             var image = this.resource.entries.textures[resourceId];
 			// {texture, center}
 			var glTexture = gl.createTexture(); 
@@ -96,7 +101,7 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 		this.frame(); 
 	}; 
 
-	function getRenderFunc(projection) {
+	function getRenderFunc() {
 		var vPositionIndx = 0; 
 		var vColorIndx = 1; 
 		var vTransIndx = 2; 
@@ -147,15 +152,21 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 		var vProjectionIndx = gl.getUniformLocation(program, "vProjection");
 		gl.uniformMatrix4fv(vProjectionIndx, false, projection);
 
-		return function(camera, texture, position, size, zDepth) {
+		return function(info) {
 			// {pos, size, direction, speed, Age, sex }
 			// {texture, center, width, height}
 			var modelview = mat4.identity(); 
-			mat4.multiply(modelview, camera); 
-			mat4.translate(modelview, [ position.x / (canvasWidth / 2), - (position.y / (canvasHeight / 2)), zDepth]); 
-			mat4.scale(modelview, [size / 300 ,size / 300 ,1]);
-			mat4.rotateX(modelview, Math.PI / 2); 
+			mat4.multiply(modelview, info.camera); 
+			mat4.translate(modelview, [ info.position.x / (canvasWidth / 2), - (info.position.y / (canvasHeight / 2)), info.zDepth]); 	
+			if(info.type === aquarium.BoidType) {
+				mat4.rotateY(modelview, Math.sin(Date.now() / 200) * Math.PI / 6); 
+			}
 
+
+			mat4.scale(modelview, [info.size / 300 ,info.size / 300 ,1]);
+
+			mat4.rotateX(modelview, Math.PI / 2); 
+		
 			gl.useProgram(program); 
 			gl.enableVertexAttribArray(0); 
 			gl.enableVertexAttribArray(1); 		
@@ -163,14 +174,14 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
 			var vModelViewIndx = gl.getUniformLocation(program, "vModelView");
 			gl.uniformMatrix4fv(vModelViewIndx, false, modelview);
 
-			gl.bindTexture(gl.TEXTURE_2D, texture);
+			gl.bindTexture(gl.TEXTURE_2D, info.texture);
 			gl.uniform1i(fTexIndx, 0); 
 			gl.bindBuffer(gl.ARRAY_BUFFER, posbuffer); 
 			gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 0, 0); 
 			gl.enableVertexAttribArray(0); 
 			gl.drawArrays(gl.TRIANGLES, 0, program.numVertices); 
 
-			gl.bindTexture(gl.TEXTURE_2D, null);//*/
+			gl.bindTexture(gl.TEXTURE_2D, null);
 		};
 	}
 

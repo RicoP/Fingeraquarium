@@ -18,6 +18,7 @@ data = {
         'treasure': undefined,
         'food': undefined,
         'bubble': undefined,
+		'bg': undefined
     },
     'types': {
         'fish': {
@@ -137,6 +138,8 @@ data = {
                 'speed': [15, 30],
             }
         }
+		
+		
     },
     'scenario': {
         'buttons': {
