@@ -814,10 +814,12 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
         for(var i = 0, e; e = this.world.entities[i]; i++) {
             var img = this.resource.entries.textures[e.resource_id];
             if(e.type != aquarium.ButtonType) continue;
+            var scale = e.size * this.world.width /
+                    Math.max(img.width, img.height);
             this.context.drawImage(img, 0, 0, img.width, img.height,
                     this.world.width * e.pos.x,
                     this.world.height * e.pos.y,
-                    img.width * e.size, img.height * e.size);
+                    img.width * scale, img.height * scale);
         }
 
         return 2;

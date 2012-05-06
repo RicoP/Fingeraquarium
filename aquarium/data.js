@@ -96,8 +96,8 @@ data = {
         'buttons': {
             'feed': {
                 'texture': 'food',
-                'pos': [0.9, 0.1],
-                'size': 0.5,
+                'pos': [0.85, 0.1],
+                'size': 0.075,
                 'callback': 'start_food_drag',
             }
         }
