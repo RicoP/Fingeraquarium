@@ -3,7 +3,7 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
     this.canvas = document.getElementById(canvas_id);
 	//gl = WebGLDebugUtils.makeDebugContext(this.canvas.getContext("experimental-webgl", {alpha : false, preserveDrawingBuffer : true}).getSafeContext()); 
 
-	var names = [ "webgl", "experimental-webgl", "moz-webgl", "webkit-3d" ];
+	var names = [ "experimental-webgl", "webgl", "moz-webgl", "webkit-3d" ];
 	var i = 0; 
 	var name; 	
 	for(i = 0; i < names.length; i++) {
