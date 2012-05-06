@@ -10,6 +10,12 @@ data = {
         'castle': undefined,
         'seaweed1': undefined,
         'seaweed2': undefined,
+        'seaweed3': undefined,
+        'sand1': undefined,
+        'sand2': undefined,
+        'sand3': undefined,
+        'skull': undefined,
+        'treasure': undefined,
         'food': undefined,
         'bubble': undefined,
     },
@@ -83,6 +89,16 @@ data = {
                 'probability': 0.1,
                 'size': [75, 100],
             },
+            'treasure': {
+                'texture': 'treasure',
+                'probability': 0.1,
+                'size': [75, 100],
+            },
+            'skull': {
+                'texture': 'skull',
+                'probability': 0.1,
+                'size': [75, 100],
+            },
             'seaweed1': {
                 'texture': 'seaweed1',
                 'probability': 0.1,
@@ -90,6 +106,26 @@ data = {
             },
             'seaweed2': {
                 'texture': 'seaweed2',
+                'probability': 0.1,
+                'size': [75, 100],
+            },
+            'seaweed3': {
+                'texture': 'seaweed3',
+                'probability': 0.1,
+                'size': [75, 100],
+            },
+            'sand1': {
+                'texture': 'sand1',
+                'probability': 0.1,
+                'size': [75, 100],
+            },
+            'sand2': {
+                'texture': 'sand2',
+                'probability': 0.1,
+                'size': [75, 100],
+            },
+            'sand3': {
+                'texture': 'sand3',
                 'probability': 0.1,
                 'size': [75, 100],
             },
