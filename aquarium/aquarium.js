@@ -772,7 +772,7 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
 
             var scale = e.size / Math.max(img.width, img.height);
             this.context.drawImage(img, 0, 0, img.width, img.height,
-                    this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
+                    this.world.width * 0.5 + e.pos.x - img.width * 0.5 * scale,
                     this.world.height * 0.5 + e.pos.y - img.height * scale,
                     img.width * scale, img.height * scale);
         }
@@ -783,8 +783,8 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
             if(e.type != aquarium.FoodType) continue;
             var scale = e.size / Math.max(img.width, img.height);
             this.context.drawImage(img, 0, 0, img.width, img.height,
-                    this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
-                    this.world.height * 0.5 + e.pos.y + img.height * 0.5 * scale,
+                    this.world.width * 0.5 + e.pos.x - img.width * scale * 0.5,
+                    this.world.height * 0.5 + e.pos.y - img.height * scale * 0.5,
                     img.width * scale, img.height * scale);
         }
 
@@ -794,8 +794,8 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
             if(e.type != aquarium.BoidType) continue;
             var scale = e.size / Math.max(img.width, img.height);
             this.context.drawImage(img, 0, 0, img.width, img.height,
-                    this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
-                    this.world.height * 0.5 + e.pos.y + img.height * 0.5 * scale,
+                    this.world.width * 0.5 + e.pos.x - img.width * 0.5 * scale,
+                    this.world.height * 0.5 + e.pos.y - img.height * 0.5 * scale,
                     img.width * scale, img.height * scale);
         }
 
@@ -805,8 +805,8 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
             if(e.type != aquarium.BubbleType) continue;
             var scale = e.size / Math.max(img.width, img.height);
             this.context.drawImage(img, 0, 0, img.width, img.height,
-                    this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
-                    this.world.height * 0.5 + e.pos.y + img.height * 0.5 * scale,
+                    this.world.width * 0.5 + e.pos.x - img.width * 0.5 * scale,
+                    this.world.height * 0.5 + e.pos.y - img.height * 0.5 * scale,
                     img.width * scale, img.height * scale);
         }
 
@@ -814,10 +814,12 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
         for(var i = 0, e; e = this.world.entities[i]; i++) {
             var img = this.resource.entries.textures[e.resource_id];
             if(e.type != aquarium.ButtonType) continue;
+            var scale = e.size * this.world.width /
+                    Math.max(img.width, img.height);
             this.context.drawImage(img, 0, 0, img.width, img.height,
                     this.world.width * e.pos.x,
                     this.world.height * e.pos.y,
-                    img.width * e.size, img.height * e.size);
+                    img.width * scale, img.height * scale);
         }
 
         return 2;
