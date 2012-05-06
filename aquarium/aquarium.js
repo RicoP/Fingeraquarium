@@ -414,9 +414,15 @@ aquarium.FoodType = 2;
 aquarium.BubbleType = 3;
 aquarium.ButtonType = 4;
 
-aquarium.interactionStart = 'touchstart'; // 'mousedown';
-aquarium.interactionMove  = 'touchmove'; // 'mousemove';
-aquarium.interactionEnd   = 'touchend'; // 'mouseup';
+if('ontouchstart' in document.documentElement) {
+    aquarium.interactionStart = 'touchstart';
+    aquarium.interactionMove  = 'touchmove';
+    aquarium.interactionEnd   = 'touchend';
+} else {
+    aquarium.interactionStart = 'mousedown';
+    aquarium.interactionMove  = 'mousemove';
+    aquarium.interactionEnd   = 'mouseup';
+}
 
 aquarium.World = function(renderer) {
     this.renderer = renderer;
