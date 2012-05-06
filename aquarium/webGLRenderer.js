@@ -3,11 +3,18 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
     this.canvas = document.getElementById(canvas_id);
 	//gl = WebGLDebugUtils.makeDebugContext(this.canvas.getContext("experimental-webgl", {alpha : false, preserveDrawingBuffer : true}).getSafeContext()); 
 	gl = this.canvas.getContext("experimental-webgl", {alpha : true, preserveDrawingBuffer : true}); 
+	if(!gl) { 
+		gl = this.canvas.getContext("webgl", {alpha : true, preserveDrawingBuffer : true}); 
+	}
 
 	gl.enable( gl.DEPTH_TEST );
 	gl.depthFunc( gl.LEQUAL );
 	gl.enable( gl.BLEND );
-	gl.blendFunc( gl.FUNC_ADD, null ); // <-- Duh?! 
+	try { 
+		gl.blendFunc( gl.FUNC_ADD ); 
+	} catch(e) {
+		gl.blendFunc( gl.FUNC_ADD, null ); // <-- Duh?! 
+	}
 	gl.blendFunc( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA );
 
    	var camPos = vec3.create([0, 0, 0.7]);
