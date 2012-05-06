@@ -636,11 +636,17 @@ aquarium.World = function(renderer) {
     }
 
     this.mousedownhandler = (function(bla, evt) {
-		console.log("mousedown");
-        var x = evt.pageX - this.renderer.canvas.offsetLeft - this.width / 2;
-        var y = evt.pageY - this.renderer.canvas.offsetTop - this.height / 2;
-        var rel_x = (evt.pageX - this.renderer.canvas.offsetLeft) / this.width;
-        var rel_y = (evt.pageY - this.renderer.canvas.offsetTop) / this.height;
+        if (aquarium.interactionMove == 'mousemove') {
+            var page_x = evt.pageX;
+            var page_y = evt.pageY;
+        } else {
+            var page_x = evt.changedTouches[0].pageX;
+            var page_y = evt.changedTouches[0].pageY;
+        }
+        var x = page_x - this.renderer.canvas.offsetLeft - this.width / 2;
+        var y = page_y - this.renderer.canvas.offsetTop - this.height / 2;
+        var rel_x = (page_x - this.renderer.canvas.offsetLeft) / this.width;
+        var rel_y = (page_y - this.renderer.canvas.offsetTop) / this.height;
         for(var i = 0, e; e = this.entities[i]; i++) {
             if(e.type == aquarium.ButtonType) {
                 if(rel_x >= e.pos.x && rel_x <= e.pos.x + e.size &&
