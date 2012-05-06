@@ -614,6 +614,7 @@ aquarium.World = function(renderer) {
     }
 
     this.mousedownhandler = (function(bla, evt) {
+		console.log("mousedown");
         var x = evt.pageX - this.renderer.canvas.offsetLeft - this.width / 2;
         var y = evt.pageY - this.renderer.canvas.offsetTop - this.height / 2;
         var rel_x = (evt.pageX - this.renderer.canvas.offsetLeft) / this.width;
