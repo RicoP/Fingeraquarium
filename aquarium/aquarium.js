@@ -141,7 +141,7 @@ aquarium.Button = function(world, x, y, size, resource_id, callback) {
 
 aquarium.Food = function(world, x, y, resource_id) {
     // Food to be eaten by fishes.
-    aquarium.Entity.call(this, world, x, y, aquarium.uniform(20, 30), resource_id);
+    aquarium.Entity.call(this, world, x, y, aquarium.uniform(30, 40), resource_id);
     this.type = aquarium.FoodType;
 
     this.direction = new aquarium.Point(0, 1);
@@ -155,7 +155,7 @@ aquarium.Food = function(world, x, y, resource_id) {
     }
 
     this.eat = function() {
-        var amount = Math.min(this.size, 0.1);
+        var amount = Math.min(this.size, 2);
         this.size -= amount;
         return amount * 50;
     }
@@ -851,7 +851,7 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
             var img = this.resource.entries.textures[e.resource_id];
             if(e.type != aquarium.ButtonType) continue;
             var scale = e.size * this.world.width /
-                    Math.max(img.width, img.height);
+                    (Math.max(img.width, img.height) * 2);
             this.context.drawImage(img, 0, 0, img.width, img.height,
                     this.world.width * e.pos.x,
                     this.world.height * e.pos.y,

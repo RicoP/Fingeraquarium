@@ -49,7 +49,7 @@ data = {
 
             'fish4': {
                 'texture': 'fish4',
-                'size': [30, 40],
+                'size': [50, 60],
                 'max_age': [3 * 60, 10 * 60],
                 'energy': [100, 100],
                 'avg_speed': [10, 30],
@@ -67,7 +67,7 @@ data = {
 
             'seahorse': {
                 'texture': 'seahorse',
-                'size': [30, 40],
+                'size': [50, 60],
                 'max_age': [3 * 60, 10 * 60],
                 'energy': [100, 100],
                 'avg_speed': [10, 20],
@@ -76,7 +76,7 @@ data = {
 
             'jaguarshark': {
                 'texture': 'jaguarshark',
-                'size': [30, 40],
+                'size': [50, 80],
                 'max_age': [3 * 60, 10 * 60],
                 'energy': [100, 100],
                 'avg_speed': [20, 30],
@@ -143,7 +143,7 @@ data = {
             'feed': {
                 'texture': 'food',
                 'pos': [0.85, 0.1],
-                'size': 0.075,
+                'size': 0.15,
                 'callback': 'start_food_drag',
             }
         }
