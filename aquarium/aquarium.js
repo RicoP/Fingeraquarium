@@ -35,9 +35,10 @@ aquarium.create_fish = function(world, x, y, value) {
             resource.avg_speed[0], resource.avg_speed[1]);
     var breed_time = aquarium.uniform(
             resource.breed_time[0], resource.breed_time[1]);
+    var size = aquarium.uniform(resource.size[0], resource.size[1]);
 
     return new aquarium.Boid(world,
-            x, y, resource_id, new_value, max_age, energy, avg_speed, breed_time);
+            x, y, resource_id, new_value, size, max_age, energy, avg_speed, breed_time);
 }
 
 aquarium.distance = function(x, y) {
@@ -127,8 +128,8 @@ aquarium.Entity = function(world, x, y, size, resource_id) {
     }
 }
 
-aquarium.Feature = function(world, x, y, resource_id) {
-    aquarium.Entity.call(this, world, x, y, aquarium.uniform(20, 40), resource_id);
+aquarium.Feature = function(world, x, y, size, resource_id) {
+    aquarium.Entity.call(this, world, x, y, size, resource_id);
     this.type = aquarium.FeatureType;
 }
 
@@ -140,7 +141,7 @@ aquarium.Button = function(world, x, y, size, resource_id, callback) {
 
 aquarium.Food = function(world, x, y, resource_id) {
     // Food to be eaten by fishes.
-    aquarium.Entity.call(this, world, x, y, aquarium.uniform(10, 20), resource_id);
+    aquarium.Entity.call(this, world, x, y, aquarium.uniform(20, 30), resource_id);
     this.type = aquarium.FoodType;
 
     this.direction = new aquarium.Point(0, 1);
@@ -174,10 +175,10 @@ aquarium.Bubble = function(world, x, y, size, speed, resource_id) {
     }
 }
 
-aquarium.Boid = function(world, x, y, pixmap, value, max_age, energy, average_speed,
+aquarium.Boid = function(world, x, y, pixmap, value, size, max_age, energy, average_speed,
         breed_time) {
     // A boid that models the fishes behavior.
-    aquarium.Entity.call(this, world, x, y, MinBoidSize, pixmap);
+    aquarium.Entity.call(this, world, x, y, size * 0.5, pixmap);
 
     this.value = value;
     this.average_speed = average_speed;
@@ -192,7 +193,7 @@ aquarium.Boid = function(world, x, y, pixmap, value, max_age, energy, average_sp
     this.next_breed = this.breed_time;
     this.age_stage = 0;
 
-    this.size = 30.;
+    this.max_size = size;
     this.fov_radius = this.size * 5;
 
     this.sex = Math.random() > 0.5 ? Female : Male;
@@ -387,8 +388,7 @@ aquarium.Boid = function(world, x, y, pixmap, value, max_age, energy, average_sp
         this.age++;
         if(Math.ceil((this.age / this.max_age) * AgeStages) > this.age_stage) {
             this.age_stage++;
-            this.size = 20 * (MinBoidSize +
-                (1 - MinBoidSize) * this.age_stage / AgeStages);
+            this.size = this.max_size * (0.5 + this.age_stage / AgeStages / 2);
         }
 
         this.next_breed = Math.max(this.next_breed - 1, 0);
@@ -434,6 +434,9 @@ aquarium.World = function(renderer) {
     this.new_entities = [];
     this.distances = [];
 
+    this.score = 0;
+    this.hiscore = 0;
+
     this.features = [];
 
     this.update_timestep = 1 / 10;
@@ -478,7 +481,6 @@ aquarium.World = function(renderer) {
             if(!random_y) {
                 var pos_y = this.height / 2;
             } else {
-                console.log('random_y' + random_y);
                 var pos_y = aquarium.uniform(-this.height / 2, this.height / 2);
             }
 
@@ -525,6 +527,7 @@ aquarium.World = function(renderer) {
            }
         }
 
+        this.score = 0;
         for(var i=0, entity; entity=this.entities[i]; i++) {
             // Ignore entities which can't think.
             if(entity.think == undefined) continue;
@@ -540,6 +543,11 @@ aquarium.World = function(renderer) {
             }
 
             entity.think(neighbors);
+            this.score += entity.value;
+        }
+
+        if(this.score > this.hiscore) {
+            this.hiscore = this.score;
         }
 
         return 10;
@@ -586,8 +594,10 @@ aquarium.World = function(renderer) {
             var pos_x = (i / feature_count + vary_x * Math.random()) *
                     this.width - this.width / 2;
 
+            var feature_type = this.feature_types[j][1];
+            var size = aquarium.uniform(feature_type.size[0], feature_type.size[1]);
             this.add_entity(new aquarium.Feature(this,
-                        pos_x, this.height / 2, this.feature_types[j][0]));
+                        pos_x, this.height / 2, size, this.feature_types[j][0]));
         }
     }
 
@@ -601,12 +611,12 @@ aquarium.World = function(renderer) {
     this.start_food_drag = function(x, y) {
         food = new aquarium.Food(this, x, y, 'food');
         this.add_entity(food);
-        var shift_x = this.width / 2;
-        var shift_y = this.height / 2;
+        var shift_x = this.renderer.canvas.offsetLeft + this.width / 2;
+        var shift_y = this.renderer.canvas.offsetTop + this.height / 2;
 
         function drag(evt) {
-            food.pos.x = evt.clientX - shift_x;
-            food.pos.y = evt.clientY - shift_y;
+            food.pos.x = evt.pageX - shift_x;
+            food.pos.y = evt.pageY - shift_y;
         }
         this.renderer.addEventListener('mousemove', drag);
         this.renderer.addEventListener('mouseup', (function() {
@@ -615,10 +625,11 @@ aquarium.World = function(renderer) {
     }
 
     this.mousedownhandler = (function(bla, evt) {
-        var x = evt.clientX - this.width / 2;
-        var y = evt.clientY - this.height / 2;
-        var rel_x = evt.clientX / this.width;
-        var rel_y = evt.clientY / this.height;
+		console.log("mousedown");
+        var x = evt.pageX - this.renderer.canvas.offsetLeft - this.width / 2;
+        var y = evt.pageY - this.renderer.canvas.offsetTop - this.height / 2;
+        var rel_x = (evt.pageX - this.renderer.canvas.offsetLeft) / this.width;
+        var rel_y = (evt.pageY - this.renderer.canvas.offsetTop) / this.height;
         for(var i = 0, e; e = this.entities[i]; i++) {
             if(e.type == aquarium.ButtonType) {
                 if(rel_x >= e.pos.x && rel_x <= e.pos.x + e.size &&
@@ -765,18 +776,6 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.world.render();
         
-        // Draw features.
-        for(var i = 0, e; e = this.world.entities[i]; i++) {
-            var img = this.resource.entries.textures[e.resource_id];
-            if(e.type != aquarium.FeatureType) continue;
-
-            var scale = e.size / Math.max(img.width, img.height);
-            this.context.drawImage(img, 0, 0, img.width, img.height,
-                    this.world.width * 0.5 + e.pos.x - img.width * 0.5 * scale,
-                    this.world.height * 0.5 + e.pos.y - img.height * scale,
-                    img.width * scale, img.height * scale);
-        }
-
         // Draw food.
         for(var i = 0, e; e = this.world.entities[i]; i++) {
             var img = this.resource.entries.textures[e.resource_id];
@@ -793,9 +792,35 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
             var img = this.resource.entries.textures[e.resource_id];
             if(e.type != aquarium.BoidType) continue;
             var scale = e.size / Math.max(img.width, img.height);
+            this.context.save();
+            this.context.translate(
+                    this.world.width * 0.5 + e.pos.x,
+                    this.world.height * 0.5 + e.pos.y);
+            if(e.direction.x < 0) {
+                this.context.scale(scale, scale);
+                var angle = aquarium.angle_between(-1, 0,
+                        e.direction.x, e.direction.y);
+            } else {
+                this.context.scale(-scale, scale);
+                var angle = aquarium.angle_between(1, 0,
+                        e.direction.x, e.direction.y);
+            }
+            if(e.direction.y > 0) angle = -angle;
+            this.context.rotate(angle);
+
+            this.context.drawImage(img, -img.width * 0.5, -img.height * 0.5);
+            this.context.restore();
+        }
+
+        // Draw features.
+        for(var i = 0, e; e = this.world.entities[i]; i++) {
+            var img = this.resource.entries.textures[e.resource_id];
+            if(e.type != aquarium.FeatureType) continue;
+
+            var scale = e.size / Math.max(img.width, img.height);
             this.context.drawImage(img, 0, 0, img.width, img.height,
                     this.world.width * 0.5 + e.pos.x - img.width * 0.5 * scale,
-                    this.world.height * 0.5 + e.pos.y - img.height * 0.5 * scale,
+                    this.world.height * 0.5 + e.pos.y - img.height * scale,
                     img.width * scale, img.height * scale);
         }
 
@@ -821,6 +846,17 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
                     this.world.height * e.pos.y,
                     img.width * scale, img.height * scale);
         }
+
+        // Draw scores.
+        this.context.font = 'bold ' + Math.floor(this.world.width * 0.04) +
+                'px sans-serif';
+        this.context.fillStyle = '#fff';
+        this.context.fillText(this.world.hiscore.toFixed(0), this.world.width * 0.05,
+                this.world.height * 0.1);
+        this.context.font = Math.floor(this.world.width * 0.03) +
+                'px sans-serif';
+        this.context.fillText(this.world.score.toFixed(0), this.world.width * 0.05,
+                this.world.height * 0.17);
 
         return 2;
     }
