@@ -2,9 +2,16 @@ aquarium.WebGLRenderer = function(canvas_id, root) {
     aquarium.Renderer.call(this, root);
     this.canvas = document.getElementById(canvas_id);
 	//gl = WebGLDebugUtils.makeDebugContext(this.canvas.getContext("experimental-webgl", {alpha : false, preserveDrawingBuffer : true}).getSafeContext()); 
-	gl = this.canvas.getContext("experimental-webgl", {alpha : true, preserveDrawingBuffer : true}); 
-	if(!gl) { 
-		gl = this.canvas.getContext("webgl", {alpha : true, preserveDrawingBuffer : true}); 
+
+	var names = [ "webgl", "experimental-webgl", "moz-webgl", "webkit-3d" ];
+	var i = 0; 
+	var name; 	
+	while((name = names[i++]) && !gl) {
+		gl = this.canvas.getContext(name, {alpha : true, preserveDrawingBuffer : true}); 
+	}
+
+	if(!gl) {
+		throw "webGL not supported :("; 
 	}
 
 	gl.enable( gl.DEPTH_TEST );
