@@ -414,9 +414,15 @@ aquarium.FoodType = 2;
 aquarium.BubbleType = 3;
 aquarium.ButtonType = 4;
 
-aquarium.interactionStart = 'touchstart'; // 'mousedown';
-aquarium.interactionMove  = 'touchmove'; // 'mousemove';
-aquarium.interactionEnd   = 'touchend'; // 'mouseup';
+if('ontouchstart' in document.documentElement) {
+    aquarium.interactionStart = 'touchstart';
+    aquarium.interactionMove  = 'touchmove';
+    aquarium.interactionEnd   = 'touchend';
+} else {
+    aquarium.interactionStart = 'mousedown';
+    aquarium.interactionMove  = 'mousemove';
+    aquarium.interactionEnd   = 'mouseup';
+}
 
 aquarium.World = function(renderer) {
     this.renderer = renderer;
@@ -636,11 +642,17 @@ aquarium.World = function(renderer) {
     }
 
     this.mousedownhandler = (function(bla, evt) {
-		console.log("mousedown");
-        var x = evt.pageX - this.renderer.canvas.offsetLeft - this.width / 2;
-        var y = evt.pageY - this.renderer.canvas.offsetTop - this.height / 2;
-        var rel_x = (evt.pageX - this.renderer.canvas.offsetLeft) / this.width;
-        var rel_y = (evt.pageY - this.renderer.canvas.offsetTop) / this.height;
+        if (aquarium.interactionMove == 'mousemove') {
+            var page_x = evt.pageX;
+            var page_y = evt.pageY;
+        } else {
+            var page_x = evt.changedTouches[0].pageX;
+            var page_y = evt.changedTouches[0].pageY;
+        }
+        var x = page_x - this.renderer.canvas.offsetLeft - this.width / 2;
+        var y = page_y - this.renderer.canvas.offsetTop - this.height / 2;
+        var rel_x = (page_x - this.renderer.canvas.offsetLeft) / this.width;
+        var rel_y = (page_y - this.renderer.canvas.offsetTop) / this.height;
         for(var i = 0, e; e = this.entities[i]; i++) {
             if(e.type == aquarium.ButtonType) {
                 if(rel_x >= e.pos.x && rel_x <= e.pos.x + e.size &&
