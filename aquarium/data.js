@@ -11,6 +11,7 @@ data = {
         'seaweed1': undefined,
         'seaweed2': undefined,
         'food': undefined,
+        'bubble': undefined,
     },
     'types': {
         'fish': {
@@ -83,6 +84,13 @@ data = {
                 'probability': 0.1,
             },
         },
+        'bubble': {
+            'small': {
+                'texture': 'bubble',
+                'size': [10, 20],
+                'speed': [15, 30],
+            }
+        }
     },
     'scenario': {
         'buttons': {

@@ -14,7 +14,8 @@ Function.prototype.bind = function(obj) {
 
 var aquarium = {};
 aquarium.initial_fishes = 5;
-aquarium.max_entities = 20;
+aquarium.max_boids = 20;
+aquarium.max_bubbles = 10;
 
 //= webGLRenderer.js
 
@@ -159,17 +160,17 @@ aquarium.Food = function(world, x, y, resource_id) {
     }
 }
 
-aquarium.Bubble = function(world, x, y, resource_id) {
+aquarium.Bubble = function(world, x, y, size, speed, resource_id) {
     // Just a bubble.
-    aquarium.Entity.call(this, world, x, y, uniform(0.5, 1), resource_id);
+    aquarium.Entity.call(this, world, x, y, size, resource_id);
 
     this.type = aquarium.BubbleType;
 
     this.direction = new aquarium.Point(0, -1);
-    this.speed = uniform(10, 30);
+    this.speed = speed;
 
     this.alive = function() {
-        return this.pos.y > -(this.world.height * 0.5) * 0.9;
+        return this.pos.y > -this.world.height * 0.6;
     }
 }
 
@@ -347,7 +348,7 @@ aquarium.Boid = function(world, x, y, pixmap, value, max_age, energy, average_sp
             } else if(chase_dir.len() < this.size) {
                 this.next_breed = this.breed_time;
                 // Only add new boids if the upper limit is not reached.
-                if(this.world.count_fishes() < aquarium.max_entities) {
+                if(this.world.count_fishes() < aquarium.max_boids) {
                     this.world.add_entity(aquarium.create_fish(
                             this.world, this.pos.x, this.pos.y,
                             this.value + this.courtshipping.value));
@@ -435,7 +436,6 @@ aquarium.World = function(renderer) {
 
     this.features = [];
 
-    this.max_entities = undefined;
     this.update_timestep = 1 / 10;
 
     this.create_default_fish = function() {
@@ -469,10 +469,26 @@ aquarium.World = function(renderer) {
                 bubbles++;
         }
 
-        /*while(bubbles < aquarium.bubble_count) {
+        var random_y = bubbles == 0;
+
+        while(bubbles < aquarium.max_bubbles) {
+            var bubble_type = this.bubble_types[
+                    Math.floor(aquarium.uniform(0, this.bubble_types.length))][1];
+            var pos_x = aquarium.uniform(-this.width / 2, this.width / 2);
+            if(!random_y) {
+                var pos_y = this.height / 2;
+            } else {
+                console.log('random_y' + random_y);
+                var pos_y = aquarium.uniform(-this.height / 2, this.height / 2);
+            }
+
+            var size = aquarium.uniform(bubble_type.size[0], bubble_type.size[1])
+            var speed = aquarium.uniform(bubble_type.speed[0], bubble_type.speed[1])
             this.add_entity(new aquarium.Bubble(this,
-                        pos_x, this.height / 2, this.bubble_types[j][0]));
-        }*/
+                        pos_x, pos_y, size, speed, bubble_type.texture));
+            bubbles++;
+        }
+        return 30;
     }
 
     this.step = function() {
@@ -631,6 +647,7 @@ aquarium.World = function(renderer) {
     this.setup = function() {
         this.feature_types = [];
         this.fish_types = [];
+        this.bubble_types = [];
 
         for(var type in this.renderer.resource.entries.types) {
             var types = this.renderer.resource.entries.types[type];
@@ -645,10 +662,16 @@ aquarium.World = function(renderer) {
                     var entry = types[name];
                     this.feature_types.push([name, entry]);
                 }
+            } else if(type == 'bubble') {
+                for(var name in types) { 
+                    var entry = types[name];
+                    this.bubble_types.push([name, entry]);
+                }
             }
         }
 
         this.rebuild_features(10);
+        this.check_bubbles(true);
 
         // Add buttons.
         for(var buttonname in this.renderer.resource.entries.scenario.buttons) {
@@ -694,17 +717,19 @@ aquarium.Renderer = function(root) {
     this.frame = function() {
         // Steps through the world.
         var time = Date.now();
+        requestAnimationFrame(this.frame.bind(this));
+        if(time - this.last_time < 20) return;
+
         while(time - this.last_time >= 20) {
             this.last_time += 20;
-
-            for(var i = 0, stepper; stepper = this.steppers[i]; i++) {
-                if(this.current_frame >= stepper[0]) {
-                    stepper[0] += stepper[1]();
-                }
-            }
-            this.current_frame++;
         }
-        requestAnimationFrame(this.frame.bind(this));
+
+        for(var i = 0, stepper; stepper = this.steppers[i]; i++) {
+            if(this.current_frame >= stepper[0]) {
+                stepper[0] += stepper[1]();
+            }
+        }
+        this.current_frame++;
     }
 
     this.addEventListener = function(name, callback) {
@@ -760,7 +785,7 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
             this.context.drawImage(img, 0, 0, img.width, img.height,
                     this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
                     this.world.height * 0.5 + e.pos.y + img.height * 0.5 * scale,
-                    img.width * scale * 5, img.height * scale * 5);
+                    img.width * scale, img.height * scale);
         }
 
         // Draw boids.
@@ -777,7 +802,7 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
         // Draw bubbles.
         for(var i = 0, e; e = this.world.entities[i]; i++) {
             var img = this.resource.entries.textures[e.resource_id];
-            if(e.type != aquarium.BoidType) continue;
+            if(e.type != aquarium.BubbleType) continue;
             var scale = e.size / Math.max(img.width, img.height);
             this.context.drawImage(img, 0, 0, img.width, img.height,
                     this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
