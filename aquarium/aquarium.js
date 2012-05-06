@@ -600,12 +600,12 @@ aquarium.World = function(renderer) {
     this.start_food_drag = function(x, y) {
         food = new aquarium.Food(this, x, y, 'food');
         this.add_entity(food);
-        var shift_x = this.width / 2;
-        var shift_y = this.height / 2;
+        var shift_x = this.renderer.canvas.offsetLeft + this.width / 2;
+        var shift_y = this.renderer.canvas.offsetTop + this.height / 2;
 
         function drag(evt) {
-            food.pos.x = evt.clientX - shift_x;
-            food.pos.y = evt.clientY - shift_y;
+            food.pos.x = evt.pageX - shift_x;
+            food.pos.y = evt.pageY - shift_y;
         }
         this.renderer.addEventListener('mousemove', drag);
         this.renderer.addEventListener('mouseup', (function() {
@@ -614,10 +614,10 @@ aquarium.World = function(renderer) {
     }
 
     this.mousedownhandler = (function(bla, evt) {
-        var x = evt.clientX - this.width / 2;
-        var y = evt.clientY - this.height / 2;
-        var rel_x = evt.clientX / this.width;
-        var rel_y = evt.clientY / this.height;
+        var x = evt.pageX - this.renderer.canvas.offsetLeft - this.width / 2;
+        var y = evt.pageY - this.renderer.canvas.offsetTop - this.height / 2;
+        var rel_x = (evt.pageX - this.renderer.canvas.offsetLeft) / this.width;
+        var rel_y = (evt.pageY - this.renderer.canvas.offsetTop) / this.height;
         for(var i = 0, e; e = this.entities[i]; i++) {
             if(e.type == aquarium.ButtonType) {
                 if(rel_x >= e.pos.x && rel_x <= e.pos.x + e.size &&
