@@ -729,12 +729,18 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
             var img = this.resource.entries.textures[e.resource_id];
 
             var max_dim = Math.max(img.width, img.height);
-            if(e.type == aquarium.BoidType || e.type == aquarium.FoodType) {
+            if(e.type == aquarium.BoidType) {
                 var scale = e.size / max_dim;
                 this.context.drawImage(img, 0, 0, img.width, img.height,
                         this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
                         this.world.height * 0.5 + e.pos.y + img.height * 0.5 * scale,
                         img.width * scale, img.height * scale);
+            } else if(e.type == aquarium.FoodType) {
+                var scale = e.size / max_dim;
+                this.context.drawImage(img, 0, 0, img.width, img.height,
+                        this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
+                        this.world.height * 0.5 + e.pos.y + img.height * 0.5 * scale,
+                        img.width * scale * 5, img.height * scale * 5);
             } else if(e.type == aquarium.FeatureType) {
                 var scale = e.size / max_dim;
                 this.context.drawImage(img, 0, 0, img.width, img.height,
