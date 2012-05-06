@@ -445,7 +445,11 @@ aquarium.World = function(renderer) {
     this.distances = [];
 
     this.score = 0;
-    this.hiscore = 0;
+    if (localStorage) {
+        this.hiscore = parseFloat(localStorage.getItem("hiscore"), 10) || 0;
+    } else {
+        this.hiscore = 0;
+    }
 
     this.features = [];
 
@@ -558,6 +562,7 @@ aquarium.World = function(renderer) {
 
         if(this.score > this.hiscore) {
             this.hiscore = this.score;
+            localStorage && localStorage.setItem("hiscore", this.hiscore);
         }
 
         return 10;
