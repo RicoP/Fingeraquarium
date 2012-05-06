@@ -414,6 +414,10 @@ aquarium.FoodType = 2;
 aquarium.BubbleType = 3;
 aquarium.ButtonType = 4;
 
+aquarium.interactionStart = 'mousedown';
+aquarium.interactionMove  = 'mousemove';
+aquarium.interactionEnd   = 'mouseup';
+
 aquarium.World = function(renderer) {
     this.renderer = renderer;
     this.width = renderer.canvas.width;
@@ -618,9 +622,9 @@ aquarium.World = function(renderer) {
             food.pos.x = evt.pageX - shift_x;
             food.pos.y = evt.pageY - shift_y;
         }
-        this.renderer.addEventListener('mousemove', drag);
-        this.renderer.addEventListener('mouseup', (function() {
-            this.renderer.removeEventListener('mousemove', drag)
+        this.renderer.addEventListener(aquarium.interactionMove, drag);
+        this.renderer.addEventListener(aquarium.interactionEnd, (function() {
+            this.renderer.removeEventListener(aquarium.interactionMove, drag)
         }).bind(this));
     }
 
@@ -642,7 +646,7 @@ aquarium.World = function(renderer) {
 
     this.mouseuphandler = (function() {
         console.log('up');
-        this.renderer.removeEventListener('mousemove', this.mousemotionhandler);
+        this.renderer.removeEventListener(aquarium.interactionMove, this.mousemotionhandler);
     }).bind(this);
 
     this.mousemotionhandler = (function(evt) {
@@ -652,7 +656,7 @@ aquarium.World = function(renderer) {
     this.initialize = function(renderer) {
         this.renderer = renderer;
         console.log('initialize');
-        this.renderer.addEventListener('mousedown', this.mousedownhandler);
+        this.renderer.addEventListener(aquarium.interactionStart, this.mousedownhandler);
     }
 
     this.setup = function() {
