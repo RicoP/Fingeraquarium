@@ -434,6 +434,9 @@ aquarium.World = function(renderer) {
     this.new_entities = [];
     this.distances = [];
 
+    this.score = 0;
+    this.hiscore = 0;
+
     this.features = [];
 
     this.update_timestep = 1 / 10;
@@ -524,6 +527,7 @@ aquarium.World = function(renderer) {
            }
         }
 
+        this.score = 0;
         for(var i=0, entity; entity=this.entities[i]; i++) {
             // Ignore entities which can't think.
             if(entity.think == undefined) continue;
@@ -539,6 +543,11 @@ aquarium.World = function(renderer) {
             }
 
             entity.think(neighbors);
+            this.score += entity.value;
+        }
+
+        if(this.score > this.hiscore) {
+            this.hiscore = this.score;
         }
 
         return 10;
@@ -834,6 +843,17 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
                     this.world.height * e.pos.y,
                     img.width * scale, img.height * scale);
         }
+
+        // Draw scores.
+        this.context.font = 'bold ' + Math.floor(this.world.width * 0.04) +
+                'px sans-serif';
+        this.context.fillStyle = '#fff';
+        this.context.fillText(this.world.hiscore.toFixed(0), this.world.width * 0.05,
+                this.world.height * 0.1);
+        this.context.font = Math.floor(this.world.width * 0.03) +
+                'px sans-serif';
+        this.context.fillText(this.world.score.toFixed(0), this.world.width * 0.05,
+                this.world.height * 0.17);
 
         return 2;
     }
