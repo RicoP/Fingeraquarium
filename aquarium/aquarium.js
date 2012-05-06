@@ -775,18 +775,6 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.world.render();
         
-        // Draw features.
-        for(var i = 0, e; e = this.world.entities[i]; i++) {
-            var img = this.resource.entries.textures[e.resource_id];
-            if(e.type != aquarium.FeatureType) continue;
-
-            var scale = e.size / Math.max(img.width, img.height);
-            this.context.drawImage(img, 0, 0, img.width, img.height,
-                    this.world.width * 0.5 + e.pos.x - img.width * 0.5 * scale,
-                    this.world.height * 0.5 + e.pos.y - img.height * scale,
-                    img.width * scale, img.height * scale);
-        }
-
         // Draw food.
         for(var i = 0, e; e = this.world.entities[i]; i++) {
             var img = this.resource.entries.textures[e.resource_id];
@@ -821,6 +809,18 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
 
             this.context.drawImage(img, -img.width * 0.5, -img.height * 0.5);
             this.context.restore();
+        }
+
+        // Draw features.
+        for(var i = 0, e; e = this.world.entities[i]; i++) {
+            var img = this.resource.entries.textures[e.resource_id];
+            if(e.type != aquarium.FeatureType) continue;
+
+            var scale = e.size / Math.max(img.width, img.height);
+            this.context.drawImage(img, 0, 0, img.width, img.height,
+                    this.world.width * 0.5 + e.pos.x - img.width * 0.5 * scale,
+                    this.world.height * 0.5 + e.pos.y - img.height * scale,
+                    img.width * scale, img.height * scale);
         }
 
         // Draw bubbles.
