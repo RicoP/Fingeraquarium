@@ -462,6 +462,19 @@ aquarium.World = function(renderer) {
         return this.distances[index];
     }
 
+    this.check_bubbles = function() {
+        var bubbles = 0;
+        for(var i=0, entity; entity=this.entities[i]; i++) {
+            if(entity.type == aquarium.BubbleType) 
+                bubbles++;
+        }
+
+        /*while(bubbles < aquarium.bubble_count) {
+            this.add_entity(new aquarium.Bubble(this,
+                        pos_x, this.height / 2, this.bubble_types[j][0]));
+        }*/
+    }
+
     this.step = function() {
         // Collect dead entities.
         var dead = [];
@@ -705,6 +718,7 @@ aquarium.Renderer = function(root) {
         this.world = world;
         this.world.initialize(this);
         this.add_frame_callback(this.world.step.bind(this.world));
+        this.add_frame_callback(this.world.check_bubbles.bind(this.world));
 
         this.resource.load(data);
         this.resource.callback = this.world.setup.bind(this.world);
@@ -725,44 +739,61 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
     this.render = function() {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.world.render();
+        
+        // Draw features.
         for(var i = 0, e; e = this.world.entities[i]; i++) {
             var img = this.resource.entries.textures[e.resource_id];
+            if(e.type != aquarium.FeatureType) continue;
 
-            var max_dim = Math.max(img.width, img.height);
-            if(e.type == aquarium.BoidType) {
-                var scale = e.size / max_dim;
-                this.context.drawImage(img, 0, 0, img.width, img.height,
-                        this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
-                        this.world.height * 0.5 + e.pos.y + img.height * 0.5 * scale,
-                        img.width * scale, img.height * scale);
-            } else if(e.type == aquarium.FoodType) {
-                var scale = e.size / max_dim;
-                this.context.drawImage(img, 0, 0, img.width, img.height,
-                        this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
-                        this.world.height * 0.5 + e.pos.y + img.height * 0.5 * scale,
-                        img.width * scale * 5, img.height * scale * 5);
-            } else if(e.type == aquarium.FeatureType) {
-                var scale = e.size / max_dim;
-                this.context.drawImage(img, 0, 0, img.width, img.height,
-                        this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
-                        this.world.height * 0.5 + e.pos.y - img.height * scale,
-                        img.width * scale, img.height * scale);
-            } else if(e.type == aquarium.ButtonType) {
-                this.context.drawImage(img, 0, 0, img.width, img.height,
-                        this.world.width * e.pos.x,
-                        this.world.height * e.pos.y,
-                        img.width * e.size, img.height * e.size);
-            }
+            var scale = e.size / Math.max(img.width, img.height);
+            this.context.drawImage(img, 0, 0, img.width, img.height,
+                    this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
+                    this.world.height * 0.5 + e.pos.y - img.height * scale,
+                    img.width * scale, img.height * scale);
         }
 
-        // Draw boids
-        /*gl.useProgram();
-        for(var i=0, e; e = this.world.entities[i]; i++) {
-            if(e.type != BoidType) continue
-
-            gl.drawArrays();
+        // Draw food.
+        for(var i = 0, e; e = this.world.entities[i]; i++) {
+            var img = this.resource.entries.textures[e.resource_id];
+            if(e.type != aquarium.FoodType) continue;
+            var scale = e.size / Math.max(img.width, img.height);
+            this.context.drawImage(img, 0, 0, img.width, img.height,
+                    this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
+                    this.world.height * 0.5 + e.pos.y + img.height * 0.5 * scale,
+                    img.width * scale * 5, img.height * scale * 5);
         }
-        gl.teardown();*/
+
+        // Draw boids.
+        for(var i = 0, e; e = this.world.entities[i]; i++) {
+            var img = this.resource.entries.textures[e.resource_id];
+            if(e.type != aquarium.BoidType) continue;
+            var scale = e.size / Math.max(img.width, img.height);
+            this.context.drawImage(img, 0, 0, img.width, img.height,
+                    this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
+                    this.world.height * 0.5 + e.pos.y + img.height * 0.5 * scale,
+                    img.width * scale, img.height * scale);
+        }
+
+        // Draw bubbles.
+        for(var i = 0, e; e = this.world.entities[i]; i++) {
+            var img = this.resource.entries.textures[e.resource_id];
+            if(e.type != aquarium.BoidType) continue;
+            var scale = e.size / Math.max(img.width, img.height);
+            this.context.drawImage(img, 0, 0, img.width, img.height,
+                    this.world.width * 0.5 + e.pos.x + img.width * 0.5 * scale,
+                    this.world.height * 0.5 + e.pos.y + img.height * 0.5 * scale,
+                    img.width * scale, img.height * scale);
+        }
+
+        // Draw interface.
+        for(var i = 0, e; e = this.world.entities[i]; i++) {
+            var img = this.resource.entries.textures[e.resource_id];
+            if(e.type != aquarium.ButtonType) continue;
+            this.context.drawImage(img, 0, 0, img.width, img.height,
+                    this.world.width * e.pos.x,
+                    this.world.height * e.pos.y,
+                    img.width * e.size, img.height * e.size);
+        }
 
         return 2;
     }
