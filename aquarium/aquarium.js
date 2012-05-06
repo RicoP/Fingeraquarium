@@ -478,7 +478,6 @@ aquarium.World = function(renderer) {
             if(!random_y) {
                 var pos_y = this.height / 2;
             } else {
-                console.log('random_y' + random_y);
                 var pos_y = aquarium.uniform(-this.height / 2, this.height / 2);
             }
 
@@ -793,10 +792,24 @@ aquarium.CanvasRenderer = function(canvas_id, root) {
             var img = this.resource.entries.textures[e.resource_id];
             if(e.type != aquarium.BoidType) continue;
             var scale = e.size / Math.max(img.width, img.height);
-            this.context.drawImage(img, 0, 0, img.width, img.height,
-                    this.world.width * 0.5 + e.pos.x - img.width * 0.5 * scale,
-                    this.world.height * 0.5 + e.pos.y - img.height * 0.5 * scale,
-                    img.width * scale, img.height * scale);
+            this.context.save();
+            this.context.translate(
+                    this.world.width * 0.5 + e.pos.x,
+                    this.world.height * 0.5 + e.pos.y);
+            if(e.direction.x < 0) {
+                this.context.scale(scale, scale);
+                var angle = aquarium.angle_between(-1, 0,
+                        e.direction.x, e.direction.y);
+            } else {
+                this.context.scale(-scale, scale);
+                var angle = aquarium.angle_between(1, 0,
+                        e.direction.x, e.direction.y);
+            }
+            if(e.direction.y > 0) angle = -angle;
+            this.context.rotate(angle);
+
+            this.context.drawImage(img, -img.width * 0.5, -img.height * 0.5);
+            this.context.restore();
         }
 
         // Draw bubbles.
