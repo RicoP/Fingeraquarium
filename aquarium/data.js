@@ -10,6 +10,12 @@ data = {
         'castle': undefined,
         'seaweed1': undefined,
         'seaweed2': undefined,
+        'seaweed3': undefined,
+        'sand1': undefined,
+        'sand2': undefined,
+        'sand3': undefined,
+        'skull': undefined,
+        'treasure': undefined,
         'food': undefined,
         'bubble': undefined,
     },
@@ -17,6 +23,7 @@ data = {
         'fish': {
             'fish1': {
                 'texture': 'fish1',
+                'size': [30, 40],
                 'max_age': [3 * 60, 10 * 60],
                 'energy': [50, 100],
                 'avg_speed': [10, 20],
@@ -25,6 +32,7 @@ data = {
 
             'pinkfish': {
                 'texture': 'pinkfish',
+                'size': [30, 40],
                 'max_age': [3 * 60, 10 * 60],
                 'energy': [100, 100],
                 'avg_speed': [10, 10],
@@ -32,6 +40,7 @@ data = {
             },
             'fish2': {
                 'texture': 'fish2',
+                'size': [30, 40],
                 'max_age': [3 * 60, 10 * 60],
                 'energy': [100, 100],
                 'avg_speed': [10, 30],
@@ -40,6 +49,7 @@ data = {
 
             'fish4': {
                 'texture': 'fish4',
+                'size': [30, 40],
                 'max_age': [3 * 60, 10 * 60],
                 'energy': [100, 100],
                 'avg_speed': [10, 30],
@@ -48,6 +58,7 @@ data = {
 
             'fish3': {
                 'texture': 'fish3',
+                'size': [30, 40],
                 'max_age': [3 * 60, 10 * 60],
                 'energy': [100, 100],
                 'avg_speed': [20, 30],
@@ -56,6 +67,7 @@ data = {
 
             'seahorse': {
                 'texture': 'seahorse',
+                'size': [30, 40],
                 'max_age': [3 * 60, 10 * 60],
                 'energy': [100, 100],
                 'avg_speed': [10, 20],
@@ -64,6 +76,7 @@ data = {
 
             'jaguarshark': {
                 'texture': 'jaguarshark',
+                'size': [30, 40],
                 'max_age': [3 * 60, 10 * 60],
                 'energy': [100, 100],
                 'avg_speed': [20, 30],
@@ -74,14 +87,47 @@ data = {
             'castle': {
                 'texture': 'castle',
                 'probability': 0.1,
+                'size': [75, 100],
+            },
+            'treasure': {
+                'texture': 'treasure',
+                'probability': 0.1,
+                'size': [75, 100],
+            },
+            'skull': {
+                'texture': 'skull',
+                'probability': 0.1,
+                'size': [75, 100],
             },
             'seaweed1': {
                 'texture': 'seaweed1',
                 'probability': 0.1,
+                'size': [75, 100],
             },
             'seaweed2': {
                 'texture': 'seaweed2',
                 'probability': 0.1,
+                'size': [75, 100],
+            },
+            'seaweed3': {
+                'texture': 'seaweed3',
+                'probability': 0.1,
+                'size': [75, 100],
+            },
+            'sand1': {
+                'texture': 'sand1',
+                'probability': 0.1,
+                'size': [75, 100],
+            },
+            'sand2': {
+                'texture': 'sand2',
+                'probability': 0.1,
+                'size': [75, 100],
+            },
+            'sand3': {
+                'texture': 'sand3',
+                'probability': 0.1,
+                'size': [75, 100],
             },
         },
         'bubble': {
