@@ -474,6 +474,13 @@ aquarium.World = Class(Object,
         this.distances = [];
 
         this.score = 0;
+        if (localStorage) {
+            this.hiscore = parseFloat(localStorage.getItem("hiscore"), 10) || 0;
+        } else {
+            this.hiscore = 0;
+        }
+
+        this.score = 0;
         this.hiscore = 0;
 
         this.features = [];
@@ -578,7 +585,6 @@ aquarium.World = Class(Object,
                 if(entity.think == undefined) continue;
 
                 var neighbors = [];
-
                 for(var j=0, other; other=this.entities[j]; j++) {
                     if(other == entity) continue;
                     dist = this.get_distance(i, j);
@@ -593,6 +599,7 @@ aquarium.World = Class(Object,
 
             if(this.score > this.hiscore) {
                 this.hiscore = this.score;
+                localStorage && localStorage.setItem("hiscore", this.hiscore);
             }
 
             return 10;
